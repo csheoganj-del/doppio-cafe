@@ -487,7 +487,9 @@ window.addEventListener('DOMContentLoaded', () => {
       const username = document.getElementById('login-username').value.trim();
       const password = document.getElementById('login-password').value.trim();
 
-      if (username === 'bonie' && password === 'diva123') {
+      if ((username === 'bonie' && password === 'diva123') || (username === 'staff' && password === 'staff123')) {
+        sessionStorage.setItem('just_logged_in', 'true');
+        sessionStorage.setItem('logged_in_user', username);
         window.location.href = 'dashboard.html';
       } else {
         if (loginError) loginError.style.display = 'block';

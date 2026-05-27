@@ -3,21 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Doppio Cafe | Staff Dashboard & Takeaway POS</title>
+  <title>Doppio Cafe Nagpur | Premium Cashier POS Control System</title>
   <link rel="stylesheet" href="dashboard-styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
-  <!-- Hidden Printable Thermal Receipt Container -->
+  <!-- GLOBAL SCREEN LOCK OVERLAY -->
+  <div id="page-lock-overlay">
+    <div class="lock-card" style="background: rgba(255, 255, 255, 0.07); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 30px 70px rgba(0,0,0,0.5); border-radius: 28px; width: 360px; padding: 40px 30px; text-align: center; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; color: #FFF; animation: fadeInUp 0.5s ease;">
+      
+      <!-- Brand Logo -->
+      <div style="font-family: 'Playfair Display', serif; font-size: 34px; font-weight: 700; color: #E7D7C9; margin-bottom: 2px; letter-spacing: 2px;">DOPPIO</div>
+      <div style="font-size: 11px; color: #C98A4A; text-transform: uppercase; letter-spacing: 4px; font-weight: 700; margin-bottom: 25px;">Café Nagpur POS</div>
+      
+      <!-- Security Icon -->
+      <div style="width: 70px; height: 70px; border-radius: 50%; background: rgba(201, 138, 74, 0.1); border: 2px solid #C98A4A; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+        <i class="fa-solid fa-lock" style="font-size: 26px; color: #C98A4A;"></i>
+      </div>
+      
+      <p style="font-family: 'Poppins', sans-serif; font-size: 13px; color: #F7F3EF; margin-bottom: 15px; font-weight: 500;">Enter Passcode to Unlock Terminal</p>
+      
+      <!-- Passcode Input -->
+      <div style="display: flex; flex-direction: column; align-items: center; width: 100%; margin-bottom: 20px;">
+        <input type="password" id="lock-passcode-input" placeholder="••••" maxlength="4" autofocus
+          style="width: 140px; padding: 10px; text-align: center; font-size: 28px; font-weight: 800; letter-spacing: 12px; border: 2px solid #C98A4A; border-radius: 12px; background: rgba(0,0,0,0.3); color: #FFF; outline: none; box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);">
+        <div id="lock-passcode-error" style="color: #FF5A5F; font-size: 11px; margin-top: 8px; height: 16px; font-weight: 600;"></div>
+      </div>
+      
+      <!-- Touch Keypad -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 230px; margin-top: 5px;">
+        <button class="lock-pin-btn" data-val="1">1</button>
+        <button class="lock-pin-btn" data-val="2">2</button>
+        <button class="lock-pin-btn" data-val="3">3</button>
+        <button class="lock-pin-btn" data-val="4">4</button>
+        <button class="lock-pin-btn" data-val="5">5</button>
+        <button class="lock-pin-btn" data-val="6">6</button>
+        <button class="lock-pin-btn" data-val="7">7</button>
+        <button class="lock-pin-btn" data-val="8">8</button>
+        <button class="lock-pin-btn" data-val="9">9</button>
+        <button class="lock-pin-btn text-btn" data-val="clear" style="font-size: 10px; text-transform: uppercase;">Clear</button>
+        <button class="lock-pin-btn" data-val="0">0</button>
+        <button class="lock-pin-btn text-btn" data-val="unlock" style="font-size: 10px; text-transform: uppercase; background: #C98A4A; color: #FFF; border-color: #C98A4A;">Enter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Printable Thermal Receipt Container (Auto-printed) -->
   <div id="thermal-receipt" class="thermal-print-area">
     <!-- Formatted dynamically in JS -->
+  </div>
+
+  <!-- Mobile Top Header Bar -->
+  <div class="mobile-top-header">
+    <div style="font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--primary-brand); letter-spacing: 1px;">DOPPIO <span style="font-size:12px; color:var(--accent-caramel); text-transform:uppercase; letter-spacing:2px;">Café</span></div>
+    <div class="avatar" style="width:32px; height:32px; font-size:12px; display:flex; align-items:center; justify-content:center; background:var(--accent-caramel); color:white; border-radius:50%; font-weight:700;">B</div>
+  </div>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <div class="mobile-bottom-nav">
+    <a href="#" class="mobile-nav-link active" data-tab="pos-tab"><i class="fa-solid fa-mug-hot"></i> POS</a>
+    <a href="#" class="mobile-nav-link" data-tab="bills-tab"><i class="fa-solid fa-file-invoice-dollar"></i> Bills</a>
+    <a href="#" class="mobile-nav-link" data-tab="inventory-tab"><i class="fa-solid fa-boxes-stacked"></i> Stock</a>
+    <a href="#" class="mobile-nav-link" data-tab="reports-tab"><i class="fa-solid fa-chart-line"></i> Reports</a>
+    <a href="#" class="mobile-nav-link" data-tab="editor-tab"><i class="fa-solid fa-pen-to-square"></i> Editor</a>
   </div>
 
   <div class="dashboard-wrapper">
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
-      <div class="sidebar-brand">
+      <div class="sidebar-brand" id="header-logo">
         <span class="brand-doppio">DOPPIO</span>
         <span class="brand-cafe">Café</span>
       </div>
@@ -40,11 +95,10 @@
       </nav>
 
       <button class="profile-sidebar-btn" id="open-profile-btn"><i class="fa-solid fa-store"></i> Business Profile</button>
-
       <a href="index.html" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Logout Portal</a>
     </aside>
 
-    <!-- Main Workspace -->
+    <!-- Main Workspace Content -->
     <main class="main-content">
       <!-- Header bar -->
       <header class="dashboard-header">
@@ -52,10 +106,42 @@
           <h1 id="tab-title">Takeaway POS</h1>
           <span id="tab-subtitle">Default Tab: Selection Grid</span>
         </div>
-        <div class="header-right" style="display: flex; align-items: center; gap: 16px;">
+
+        <!-- Cashier Diagnostics & Daily Sales Info -->
+        <div class="header-center-metrics">
+          <div class="header-metric-pill" title="Current Daily Sales Total">
+            <i class="fa-solid fa-indian-rupee-sign"></i>
+            <div class="header-metric-details">
+              <span class="header-metric-val" id="header-sales-today">₹0.00</span>
+              <span class="header-metric-lbl">Sales Today</span>
+            </div>
+          </div>
+          <div class="header-metric-pill" title="Total Bills Completed Today">
+            <i class="fa-solid fa-receipt"></i>
+            <div class="header-metric-details">
+              <span class="header-metric-val" id="header-bills-today">0 Bills</span>
+              <span class="header-metric-lbl">Total Bills</span>
+            </div>
+          </div>
+          <div class="header-metric-pill" title="Shift Period Duration">
+            <i class="fa-solid fa-clock"></i>
+            <div class="header-metric-details">
+              <span class="header-metric-val">09:00 - 22:30</span>
+              <span class="header-metric-lbl">Shift Active</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Notification Bell Icon -->
+          <div class="bell-icon-wrapper" id="notifications-bell" title="System Alerts">
+            <i class="fa-solid fa-bell"></i>
+            <span class="bell-badge" id="bell-badge" style="display: none;"></span>
+          </div>
+
           <div class="status-indicator-badge" id="network-status-badge">
             <span class="status-dot green"></span>
-            <span class="status-text">Online Mode</span>
+            <span class="status-text" id="supabase-sync-text">Supabase Live</span>
           </div>
           <div class="dateTime" id="dateTime">May 27, 2026 12:00 PM</div>
         </div>
@@ -75,8 +161,10 @@
             <!-- Menu Column -->
             <div class="pos-menu-side">
               <div class="pos-search-bar">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="pos-search" placeholder="Quick search drink/food item...">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="pos-search" placeholder="Quick search drink/food item (Press '/' to focus)...">
+                <span class="shortcut-indicator">/</span>
+                <i class="fa-solid fa-microphone voice-search-icon" id="voice-search-btn" title="Voice search coming soon"></i>
               </div>
               <div class="pos-categories" id="pos-categories">
                 <!-- Categories rendered dynamically -->
@@ -84,41 +172,58 @@
               <div class="pos-items-grid" id="pos-items-grid">
                 <!-- POS Touch Cards injected dynamically -->
               </div>
+              
+              <!-- Floating Cart Bar for Mobile View -->
+              <div class="floating-cart-bar" id="mobile-floating-cart">
+                <span><i class="fa-solid fa-basket-shopping"></i> View Cart (<span id="mobile-cart-count">0</span> items)</span>
+                <span style="font-weight:800;" id="mobile-cart-total">₹0</span>
+              </div>
             </div>
 
             <!-- Cart Sidebar -->
-            <div class="pos-cart-side">
+            <div class="pos-cart-side pos-cart-sidebar" id="pos-cart-sidebar">
               <div class="cart-header">
-                <h2>Takeaway Cart</h2>
+                <div class="cart-header-title" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                  <h2>Takeaway Cart</h2>
+                  <button type="button" class="close-cart-drawer-btn" id="close-mobile-cart-btn" style="display:none; background:rgba(43,24,19,0.06); border:none; border-radius:50%; width:30px; height:30px; font-size:18px; line-height:28px; text-align:center; color:var(--primary-brand); font-weight:700; cursor:pointer;">&times;</button>
+                </div>
                 <button class="clear-cart-btn" id="clear-cart"><i class="fa-solid fa-trash-can"></i> Clear</button>
               </div>
 
-              <!-- Takeaway Customer Fields -->
-              <div class="takeaway-fields" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label for="cust-name" style="font-size: 11px;">Customer Name</label>
-                  <input type="text" id="cust-name" placeholder="Name" style="padding: 8px 10px; font-size: 13px;">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label for="cust-phone" style="font-size: 11px;">Customer Phone</label>
-                  <input type="text" id="cust-phone" placeholder="Phone" style="padding: 8px 10px; font-size: 13px;">
-                </div>
+              <!-- Order Type Toggle Pills -->
+              <div class="order-type-picker">
+                <button class="order-type-btn active" data-type="Takeaway" id="order-takeaway-btn"><i class="fa-solid fa-bag-shopping"></i> Takeaway</button>
+                <button class="order-type-btn" data-type="DineIn" id="order-dinein-btn"><i class="fa-solid fa-chair"></i> Dine-in</button>
+                <button class="order-type-btn" data-type="Delivery" id="order-delivery-btn"><i class="fa-solid fa-truck"></i> Delivery</button>
               </div>
-              <div class="form-group" style="margin-bottom: 12px;">
-                <label for="order-num" style="font-size: 11px;">Takeaway Order #</label>
-                <input type="text" id="order-num" placeholder="Auto-generated" readonly style="padding: 8px 10px; font-size: 13px;">
+
+              <!-- Takeaway Customer Fields -->
+              <div class="takeaway-fields">
+                <div class="form-group">
+                  <label for="cust-name">Customer Name</label>
+                  <input type="text" id="cust-name" placeholder="Enter guest name...">
+                </div>
+                <div class="form-group">
+                  <label for="cust-phone">Phone Number (Loyalty Link)</label>
+                  <input type="text" id="cust-phone" placeholder="Enter 10 digit number...">
+                </div>
               </div>
 
               <!-- Loyalty Status Box -->
-              <div class="loyalty-status-box" id="loyalty-status-box" style="display: none; padding: 10px 12px; background: rgba(200, 138, 88, 0.08); border: 1px solid rgba(200, 138, 88, 0.3); border-radius: 8px; font-size: 12px; margin-bottom: 12px; color: var(--primary-brand); line-height: 1.4; text-align: left;">
+              <div class="loyalty-status-box" id="loyalty-status-box" style="display: none; padding: 10px 12px; background: rgba(201, 138, 74, 0.08); border: 1px solid rgba(201, 138, 74, 0.3); border-radius: 8px; font-size: 11px; margin-bottom: 12px; color: var(--primary-brand); line-height: 1.4;">
                 <!-- Filled dynamically -->
+              </div>
+
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label for="order-num">Takeaway Order #</label>
+                <input type="text" id="order-num" placeholder="Auto-generated" readonly style="background: var(--bg-cream-light); font-weight: 700;">
               </div>
 
               <!-- Cart list -->
               <div class="cart-items-list" id="cart-items-list">
                 <div class="empty-cart-state">
                   <i class="fa-solid fa-basket-shopping"></i>
-                  <p>Cart is currently empty.<br>Tap items to add.</p>
+                  <p>Cart is currently empty.<br>Tap items to add & customize.</p>
                 </div>
               </div>
 
@@ -129,7 +234,7 @@
                   <span id="cart-subtotal">₹0.00</span>
                 </div>
                 <div class="summary-row">
-                  <span>GST (18%)</span>
+                  <span>Taxes & Discounts</span>
                   <span id="cart-gst">₹0.00</span>
                 </div>
                 <div class="summary-row total-row">
@@ -154,120 +259,215 @@
 
         <!-- TAB 2: BILLS MANAGEMENT -->
         <div class="tab-content" id="bills-tab">
-          <div class="bills-controls">
-            <div class="bills-search">
-              <i class="fa-solid fa-magnifying-glass"></i>
-              <input type="text" id="bills-search-input" placeholder="Search by customer name or bill ID...">
+          <div class="bills-tab-wrapper">
+            <!-- Bills analytics header -->
+            <div class="bills-analytics-header">
+              <div class="bills-stat-card">
+                <div class="bills-stat-icon"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+                <div class="bills-stat-info">
+                  <span class="bills-stat-title">Daily Sales Turnover</span>
+                  <span class="bills-stat-val" id="bills-revenue-card">₹0.00</span>
+                  <span class="bills-stat-trend">↑ +14% vs. Yesterday</span>
+                </div>
+              </div>
+              <div class="bills-stat-card">
+                <div class="bills-stat-icon green"><i class="fa-solid fa-receipt"></i></div>
+                <div class="bills-stat-info">
+                  <span class="bills-stat-title">Active Orders Count</span>
+                  <span class="bills-stat-val" id="bills-total-card">0 Orders</span>
+                  <span class="bills-stat-trend">UPI: <span id="bills-upi-percent">0%</span> • Cash: <span id="bills-cash-percent">0%</span></span>
+                </div>
+              </div>
+              <div class="bills-stat-card">
+                <div class="bills-stat-icon blue"><i class="fa-solid fa-mug-hot"></i></div>
+                <div class="bills-stat-info">
+                  <span class="bills-stat-title">Average Order Value</span>
+                  <span class="bills-stat-val" id="bills-aov-card">₹0.00</span>
+                  <span class="bills-stat-trend">Estimated margin: 68%</span>
+                </div>
+              </div>
             </div>
-            <div class="bills-actions">
-              <span class="results-count" id="bills-count">Showing 0 Bills</span>
-            </div>
-          </div>
-          <div class="date-filter-bar">
-            <label><i class="fa-solid fa-calendar-days"></i> From:</label>
-            <input type="date" id="bills-date-from">
-            <label>To:</label>
-            <input type="date" id="bills-date-to">
-            <button class="btn btn-primary filter-btn" id="bills-filter-btn"><i class="fa-solid fa-filter"></i> Filter</button>
-            <button class="btn btn-secondary filter-btn" id="bills-reset-btn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
-          </div>
 
-          <div class="bills-table-container">
-            <table class="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Order #</th>
-                  <th>Customer Name</th>
-                  <th>Date & Time</th>
-                  <th>Items Ordered</th>
-                  <th>Payment</th>
-                  <th>Amount</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="bills-table-body">
-                <!-- Bills rows injected dynamically -->
-              </tbody>
-            </table>
+            <!-- Toolbar & Presets -->
+            <div class="bills-controls">
+              <div class="bills-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="bills-search-input" placeholder="Search order ID, guest name, phone...">
+              </div>
+              
+              <!-- Quick filter preset chips -->
+              <div class="date-preset-chips" id="bills-preset-chips">
+                <button class="preset-chip active" data-preset="all">All Invoices</button>
+                <button class="preset-chip" data-preset="today">Today</button>
+                <button class="preset-chip" data-preset="yesterday">Yesterday</button>
+                <button class="preset-chip" data-preset="week">This Week</button>
+                <button class="preset-chip" data-preset="month">This Month</button>
+              </div>
+
+              <div class="results-count" id="bills-count">Showing 0 Bills</div>
+            </div>
+
+            <!-- Date Filter Inputs row -->
+            <div class="date-filter-bar" style="margin-bottom: 0;">
+              <label><i class="fa-solid fa-calendar-days"></i> From:</label>
+              <input type="date" id="bills-date-from">
+              <label>To:</label>
+              <input type="date" id="bills-date-to">
+              <button class="btn btn-primary filter-btn" id="bills-filter-btn"><i class="fa-solid fa-filter"></i> Apply Filters</button>
+              <button class="btn btn-secondary filter-btn" id="bills-reset-btn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+            </div>
+
+            <!-- SaaS Data Table -->
+            <div class="bills-table-container">
+              <table class="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Order #</th>
+                    <th>Customer Details</th>
+                    <th>Date & Time</th>
+                    <th>Ordered Items</th>
+                    <th>Payment Method</th>
+                    <th>Total Amount</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="bills-table-body">
+                  <!-- Bills rows injected dynamically in JS -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         <!-- TAB 3: INVENTORY CONTROL -->
         <div class="tab-content" id="inventory-tab">
-          <div class="inventory-header-actions">
-            <h2>Ingredient & Stock Levels</h2>
-            <div class="inventory-action-btns">
-              <button class="export-btn excel" id="export-inventory-excel-btn"><i class="fa-solid fa-file-excel"></i> Export CSV</button>
-              <button class="export-btn pdf" id="export-inventory-pdf-btn"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
-              <button class="btn btn-primary" id="restock-inventory-btn"><i class="fa-solid fa-rotate-left"></i> Reset to Full Stock</button>
+          <div class="bills-tab-wrapper">
+            <!-- Inventory Analytics Cards -->
+            <div class="bills-analytics-header">
+              <div class="bills-stat-card">
+                <div class="bills-stat-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+                <div class="bills-stat-info">
+                  <span class="bills-stat-title">Total Ingredients Tracked</span>
+                  <span class="bills-stat-val" id="inv-total-tracked">41 items</span>
+                  <span class="bills-stat-trend">Deduction status: AUTO ACTIVE</span>
+                </div>
+              </div>
+              <div class="bills-stat-card">
+                <div class="bills-stat-icon green" style="background-color:rgba(241,196,15,0.08); color:var(--warning-color);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="bills-stat-info">
+                  <span class="bills-stat-title">Low Stock Warnings</span>
+                  <span class="bills-stat-val" id="inv-total-low">0 Warnings</span>
+                  <span class="bills-stat-trend">Reorder threshold: 15%</span>
+                </div>
+              </div>
+              <div class="bills-stat-card">
+                <div class="bills-stat-icon blue" style="background-color:rgba(231,76,60,0.08); color:var(--danger-color);"><i class="fa-solid fa-circle-xmark"></i></div>
+                <div class="bills-stat-info">
+                  <span class="bills-stat-title">Out of Stock Items</span>
+                  <span class="bills-stat-val" id="inv-total-empty">0 Items</span>
+                  <span class="bills-stat-trend">Restock recommendation active</span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div class="inventory-grid" id="inventory-grid">
-            <!-- Inventory bars injected dynamically -->
+            <!-- Toolbar actions -->
+            <div class="inventory-header-actions">
+              <h2>Ingredient & Stock Levels</h2>
+              <div class="inventory-action-btns">
+                <button class="export-btn excel btn btn-secondary" id="export-inventory-excel-btn"><i class="fa-solid fa-file-excel"></i> Export CSV</button>
+                <button class="export-btn pdf btn btn-secondary" id="export-inventory-pdf-btn"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
+                <button class="btn btn-primary" id="restock-inventory-btn"><i class="fa-solid fa-rotate-left"></i> Reset to Full Stock</button>
+              </div>
+            </div>
+
+            <!-- Stock bar grid -->
+            <div class="inventory-grid" id="inventory-grid">
+              <!-- Inventory bars injected dynamically -->
+            </div>
           </div>
         </div>
 
         <!-- TAB 4: SALES REPORTS -->
         <div class="tab-content" id="reports-tab">
-          <div class="reports-header-actions">
-            <div class="report-filters">
-              <span class="report-span">Doppio Nagpur Sales Overview</span>
-            </div>
-            <div class="export-actions">
-              <button class="export-btn excel" id="export-excel-btn"><i class="fa-solid fa-file-excel"></i> Export Excel (CSV)</button>
-              <button class="export-btn pdf" id="export-pdf-btn"><i class="fa-solid fa-file-pdf"></i> Export Sales PDF</button>
-            </div>
-          </div>
-          <div class="date-filter-bar">
-            <label><i class="fa-solid fa-calendar-days"></i> From:</label>
-            <input type="date" id="reports-date-from">
-            <label>To:</label>
-            <input type="date" id="reports-date-to">
-            <button class="btn btn-primary filter-btn" id="reports-filter-btn"><i class="fa-solid fa-filter"></i> Apply Filter</button>
-            <button class="btn btn-secondary filter-btn" id="reports-reset-btn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
-            <span class="results-count" id="reports-filtered-label"></span>
-          </div>
-
-          <!-- Sales Cards -->
-          <div class="sales-cards">
-            <div class="sales-card">
-              <div class="sales-card-icon green"><i class="fa-solid fa-indian-rupee-sign"></i></div>
-              <div class="sales-card-details">
-                <h3 id="report-total-revenue">₹0.00</h3>
-                <p>Total Revenue</p>
+          <div class="bills-tab-wrapper">
+            <!-- Sales Action Bar -->
+            <div class="reports-header-actions">
+              <div class="report-filters">
+                <span class="report-span" style="font-family:var(--font-heading); font-size:22px; font-weight:700; color:var(--primary-brand);">Doppio Nagpur Analytics Studio</span>
               </div>
-            </div>
-            <div class="sales-card">
-              <div class="sales-card-icon blue"><i class="fa-solid fa-receipt"></i></div>
-              <div class="sales-card-details">
-                <h3 id="report-total-orders">0</h3>
-                <p>Takeaway Orders Placed</p>
-              </div>
-            </div>
-            <div class="sales-card">
-              <div class="sales-card-icon orange"><i class="fa-solid fa-mug-hot"></i></div>
-              <div class="sales-card-details">
-                <h3 id="report-top-item">-</h3>
-                <p>Top Drink Selection</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="reports-columns">
-            <!-- Left Side: Order Log Summary -->
-            <div class="report-panel">
-              <h3>Order Ledger Logs</h3>
-              <div class="report-ledger-list" id="report-ledger-list">
-                <!-- Ledger items dynamically -->
+              <div class="export-actions">
+                <button class="export-btn excel btn btn-secondary" id="export-excel-btn"><i class="fa-solid fa-file-excel"></i> Export Excel (CSV)</button>
+                <button class="export-btn pdf btn btn-secondary" id="export-pdf-btn"><i class="fa-solid fa-file-pdf"></i> Export Sales PDF</button>
               </div>
             </div>
 
-            <!-- Right Side: Analytics breakdown -->
-            <div class="report-panel">
-              <h3>Ingredient Resource Consumption</h3>
-              <div class="ingredient-stats-list" id="ingredient-stats-list">
-                <!-- Ingredient breakdown dynamic -->
+            <div class="date-filter-bar">
+              <label><i class="fa-solid fa-calendar-days"></i> From:</label>
+              <input type="date" id="reports-date-from">
+              <label>To:</label>
+              <input type="date" id="reports-date-to">
+              <button class="btn btn-primary filter-btn" id="reports-filter-btn"><i class="fa-solid fa-filter"></i> Apply Filter</button>
+              <button class="btn btn-secondary filter-btn" id="reports-reset-btn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+              <span class="results-count" id="reports-filtered-label"></span>
+            </div>
+
+            <!-- KPI Metric widgets -->
+            <div class="sales-cards">
+              <div class="sales-card">
+                <div class="sales-card-icon green"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+                <div class="sales-card-details">
+                  <h3 id="report-total-revenue">₹0.00</h3>
+                  <p>Total Revenue</p>
+                </div>
+              </div>
+              <div class="sales-card">
+                <div class="sales-card-icon blue"><i class="fa-solid fa-receipt"></i></div>
+                <div class="sales-card-details">
+                  <h3 id="report-total-orders">0</h3>
+                  <p>Orders Logged</p>
+                </div>
+              </div>
+              <div class="sales-card">
+                <div class="sales-card-icon orange"><i class="fa-solid fa-mug-hot"></i></div>
+                <div class="sales-card-details">
+                  <h3 id="report-top-item">-</h3>
+                  <p>Top Beverage Selection</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="reports-columns">
+              <!-- Left Side: Interactive SVG Revenue Visualizations & Insights -->
+              <div class="report-panel">
+                <h3>Revenue Trend Line Chart</h3>
+                <div class="chart-visual-box" id="reports-revenue-chart-box">
+                  <!-- Vector chart drawn dynamically via JS -->
+                  <span style="color:var(--text-muted); font-size:12px;">Visualizing daily sales metrics...</span>
+                </div>
+                
+                <div class="ai-recommendations-box">
+                  <h4 style="font-size:12px; font-weight:700; color:var(--accent-caramel); margin-bottom:8px;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Business Intelligence Insights</h4>
+                  <div id="ai-insights-list">
+                    <div class="ai-tip-item"><i class="fa-solid fa-circle-check"></i> <span>Dine-in combinations represent the highest average ticket size at Nagpur.</span></div>
+                    <div class="ai-tip-item"><i class="fa-solid fa-circle-check"></i> <span>Peak hourly transactions occur between 18:00 and 20:30 (happy hours).</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Side: Ingredient & order log Ledger lists -->
+              <div class="report-columns-right" style="display:flex; flex-direction:column; gap:20px;">
+                <div class="report-panel" style="flex-grow:1; max-height: 240px; overflow-y:auto;">
+                  <h3>Resource & Ingredient Consumption</h3>
+                  <div class="ingredient-stats-list" id="ingredient-stats-list">
+                    <!-- Dynamic ingredient percentages -->
+                  </div>
+                </div>
+                <div class="report-panel" style="flex-grow:1; max-height: 240px; overflow-y:auto;">
+                  <h3>Recent Ledger Transactions</h3>
+                  <div class="report-ledger-list" id="report-ledger-list">
+                    <!-- Transactions logs -->
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -275,68 +475,81 @@
 
         <!-- TAB 5: MENU EDITOR -->
         <div class="tab-content" id="editor-tab">
-          <div class="editor-header">
-            <h2>Add or Edit Menu Items</h2>
-            <button class="btn btn-primary" id="add-new-menu-btn"><i class="fa-solid fa-plus"></i> Add New Menu Item</button>
-          </div>
-
-          <div class="menu-editor-layout">
-            <!-- Left Side: Form for Adding/Editing -->
-            <div class="menu-editor-form-panel" id="editor-form-panel">
-              <h3 id="form-panel-title">Add New Menu Item</h3>
-              <form id="menu-item-editor-form">
-                <input type="hidden" id="edit-item-index" value="">
-                
-                <div class="form-group">
-                  <label for="item-name-input">Item Name</label>
-                  <input type="text" id="item-name-input" placeholder="e.g. Hazelnut Latte" required>
-                </div>
-
-                <div class="form-group">
-                  <label for="item-category-input">Category</label>
-                  <select id="item-category-input" required>
-                    <option value="COLD COFFEE">Cold Coffee</option>
-                    <option value="HOT COFFEE">Hot Coffee</option>
-                    <option value="MATCHA">Matcha</option>
-                    <option value="FRIES & SHARE PLATES">Fries & Plates</option>
-                    <option value="MOCKTAILS">Mocktails</option>
-                    <option value="SANDWICHES">Sandwiches</option>
-                    <option value="THICK SHAKES">Thick Shakes</option>
-                    <option value="CLASSIC TOAST">Classic Toast</option>
-                    <option value="EGGS">Eggs</option>
-                    <option value="APPETIZERS">Appetizers</option>
-                    <option value="COMBOS">Combos</option>
-                    <option value="PASTA">Pasta</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="item-price-input">Price (₹)</label>
-                  <input type="number" id="item-price-input" placeholder="e.g. 299" required min="1">
-                </div>
-
-                <div class="form-group">
-                  <label for="item-desc-input">Description</label>
-                  <textarea id="item-desc-input" placeholder="Enter details..." required rows="3"></textarea>
-                </div>
-
-                <div class="form-group">
-                  <label for="item-icon-input">Emoji Icon</label>
-                  <input type="text" id="item-icon-input" placeholder="e.g. ☕" required>
-                </div>
-
-                <div class="form-actions">
-                  <button type="submit" class="btn btn-primary" id="save-item-btn">Save Menu Item</button>
-                  <button type="button" class="btn btn-secondary" id="cancel-edit-btn" style="color: var(--primary-brand); border-color: var(--primary-brand);">Cancel</button>
-                </div>
-              </form>
+          <div class="bills-tab-wrapper">
+            <div class="editor-header">
+              <h2>Add or Edit Menu Items</h2>
+              <button class="btn btn-primary" id="add-new-menu-btn"><i class="fa-solid fa-plus"></i> Add New Menu Item</button>
             </div>
 
-            <!-- Right Side: Interactive item grid with edit/delete buttons -->
-            <div class="menu-editor-list-panel">
-              <h3>All Menu Items</h3>
-              <div class="menu-editor-grid" id="editor-items-grid">
-                <!-- Menu Items with edit controls will render here -->
+            <div class="menu-editor-layout">
+              <!-- Left Side: Custom Input Visual Form -->
+              <div class="menu-editor-form-panel" id="editor-form-panel">
+                <h3 id="form-panel-title">Add New Menu Item</h3>
+                <form id="menu-item-editor-form">
+                  <input type="hidden" id="edit-item-index" value="">
+                  
+                  <div class="form-group">
+                    <label for="item-name-input">Item Name</label>
+                    <input type="text" id="item-name-input" placeholder="e.g. Nutella Latte" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="item-category-input">Category</label>
+                    <select id="item-category-input" required>
+                      <option value="COLD COFFEE">Cold Coffee</option>
+                      <option value="HOT COFFEE">Hot Coffee</option>
+                      <option value="MATCHA">Matcha</option>
+                      <option value="FRIES & SHARE PLATES">Fries & Plates</option>
+                      <option value="MOCKTAILS">Mocktails</option>
+                      <option value="SANDWICHES">Sandwiches</option>
+                      <option value="THICK SHAKES">Thick Shakes</option>
+                      <option value="CLASSIC TOAST">Classic Toast</option>
+                      <option value="EGGS">Eggs</option>
+                      <option value="APPETIZERS">Appetizers</option>
+                      <option value="COMBOS">Combos</option>
+                      <option value="PASTA">Pasta</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="item-price-input">Standard Base Price (₹)</label>
+                    <input type="number" id="item-price-input" placeholder="e.g. 299" required min="1">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="item-desc-input">Short Description</label>
+                    <textarea id="item-desc-input" placeholder="Enter standard beverage details..." required rows="2"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="item-icon-input">Emoji representation icon</label>
+                    <input type="text" id="item-icon-input" placeholder="e.g. ☕" required>
+                  </div>
+
+                  <div class="form-group" style="margin-top: 15px;">
+                    <label style="font-weight: 700; color: var(--primary-brand);"><i class="fa-solid fa-mortar-pestle"></i> Recipe Maker (Ingredients Link)</label>
+                    <div id="recipe-ingredients-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                      <!-- Dynamic ingredient link rows will be added here -->
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="add-recipe-ingredient-btn" style="margin-top: 10px; font-size: 11px; padding: 6px 12px; align-self: flex-start; display: flex; align-items: center; gap: 6px; border-color: var(--accent-caramel); color: var(--primary-brand); font-weight:600;">
+                      <i class="fa-solid fa-plus"></i> Add Ingredient Link
+                    </button>
+                  </div>
+
+                  <!-- Form Action Buttons -->
+                  <div class="form-actions" style="display:flex; gap:10px; margin-top:20px;">
+                    <button type="submit" class="btn btn-primary" id="save-item-btn" style="flex:1;">Save Menu Item</button>
+                    <button type="button" class="btn btn-secondary" id="cancel-edit-btn" style="color:var(--primary-brand); border-color:var(--primary-brand);">Cancel</button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Right Side: Touch card listings grid -->
+              <div class="menu-editor-list-panel">
+                <h3>Active Nagpur Cafe Menu List</h3>
+                <div class="menu-editor-grid" id="editor-items-grid">
+                  <!-- Dynamic cards injected in JS -->
+                </div>
               </div>
             </div>
           </div>
@@ -344,43 +557,70 @@
 
         <!-- TAB 6: CRM & LOYALTY -->
         <div class="tab-content" id="crm-tab">
-          <div class="crm-header-actions" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
-            <h2>CRM Customer Loyalty Program</h2>
-            <div class="crm-stats" style="display: flex; gap: 16px;">
-              <div class="crm-stat-card" style="background: var(--bg-card); padding: 12px 24px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid rgba(44,27,24,0.05); text-align: center; min-width: 140px;">
-                <span class="stat-num" id="crm-total-members" style="display: block; font-size: 24px; font-weight: 700; color: var(--accent-caramel);">0</span>
-                <span class="stat-label" style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Total Members</span>
-              </div>
-              <div class="crm-stat-card" style="background: var(--bg-card); padding: 12px 24px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid rgba(44,27,24,0.05); text-align: center; min-width: 180px;">
-                <span class="stat-num" id="crm-top-spender" style="display: block; font-size: 20px; font-weight: 700; color: var(--primary-brand); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">-</span>
-                <span class="stat-label" style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Top Spender</span>
+          <div class="bills-tab-wrapper">
+            <div class="crm-header-actions">
+              <h2>CRM Customer Loyalty Ledger</h2>
+              <div class="crm-stats">
+                <div class="crm-stat-card">
+                  <span class="stat-num" id="crm-total-members" style="display: block; font-size: 24px; font-weight: 700; color: var(--accent-caramel);">0</span>
+                  <span class="stat-label" style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Total Members</span>
+                </div>
+                <div class="crm-stat-card">
+                  <span class="stat-num" id="crm-top-spender" style="display: block; font-size: 16px; font-weight: 700; color: var(--primary-brand); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">-</span>
+                  <span class="stat-label" style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Top Spender</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="crm-controls" style="margin-bottom: 16px;">
-            <div class="crm-search" style="position: relative; max-width: 400px;">
-              <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--accent-caramel);"></i>
-              <input type="text" id="crm-search-input" placeholder="Search by customer name or phone number..." style="width: 100%; padding: 10px 14px 10px 38px; border-radius: 8px; border: 1px solid rgba(44,27,24,0.15); background: var(--bg-card); font-size: 13px; outline: none; transition: var(--transition);">
+            <!-- Tiers showcase strips -->
+            <div class="loyalty-tiers-strip">
+              <div class="tier-card bronze">
+                <span class="tier-title">Bronze Tier ☕</span>
+                <span class="tier-points">Entry Level</span>
+                <span class="tier-benefit">Visits: 0-4 • Points standard</span>
+              </div>
+              <div class="tier-card silver">
+                <span class="tier-title">Silver Tier 🥈</span>
+                <span class="tier-points">5% Discount</span>
+                <span class="tier-benefit">Visits: 5-9 • Free extra shot</span>
+              </div>
+              <div class="tier-card gold">
+                <span class="tier-title">Gold Tier 🥇</span>
+                <span class="tier-points">10% Discount</span>
+                <span class="tier-benefit">Visits: 10-19 • Free cookies</span>
+              </div>
+              <div class="tier-card platinum">
+                <span class="tier-title">Platinum Tier 💎</span>
+                <span class="tier-points">15% Discount</span>
+                <span class="tier-benefit">Visits: 20+ • Free beverages</span>
+              </div>
             </div>
-          </div>
 
-          <div class="crm-table-container" style="background: var(--bg-card); border-radius: var(--border-radius); box-shadow: var(--shadow-sm); overflow: hidden; border: 1px solid rgba(44,27,24,0.05);">
-            <table class="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Customer Name</th>
-                  <th>Phone Number</th>
-                  <th>Visit Count</th>
-                  <th>Total Spent</th>
-                  <th>Loyalty Tier</th>
-                  <th>Last Visit</th>
-                </tr>
-              </thead>
-              <tbody id="crm-table-body">
-                <!-- Loyalty rows injected dynamically -->
-              </tbody>
-            </table>
+            <div class="crm-controls">
+              <div class="crm-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="crm-search-input" placeholder="Search members database by name or phone...">
+              </div>
+            </div>
+
+            <!-- SaaS CRM table -->
+            <div class="crm-table-container">
+              <table class="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Customer Name</th>
+                    <th>Phone Number</th>
+                    <th>Visit Count</th>
+                    <th>Total Spent</th>
+                    <th>Loyalty Tier</th>
+                    <th>Last Visit Date</th>
+                  </tr>
+                </thead>
+                <tbody id="crm-table-body">
+                  <!-- Injected dynamically in JS -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -388,83 +628,199 @@
     </main>
   </div>
 
-  <!-- ADMIN PIN MODAL -->
-  <div class="modal-backdrop" id="admin-pin-modal">
-    <div class="glass-modal admin-pin-glass">
+  <!-- CUSTOM PRODUCT CUSTOMIZATION DRAWERS / MODALS (POPUP IN MAIN POS TAB) -->
+  <div class="modal-backdrop" id="custom-addon-modal">
+    <div class="glass-modal cust-dialog-modal">
       <div class="modal-header">
-        <h2><i class="fa-solid fa-shield-halved"></i> Admin Verification</h2>
-        <button class="close-modal-btn" id="close-pin-modal">&times;</button>
+        <h2 id="cust-modal-title"><i class="fa-solid fa-mug-hot"></i> Customize Drink</h2>
+        <button class="close-modal-btn" id="close-cust-modal">&times;</button>
       </div>
-      <div class="modal-body" style="text-align:center; padding: 20px;">
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Enter the Admin PIN to authorise this action.</p>
-        <input type="password" id="admin-pin-input" placeholder="••••" maxlength="6"
-          style="width: 120px; padding: 12px; text-align: center; font-size: 22px; font-weight: 700; letter-spacing: 6px;
-          border: 2px solid var(--accent-caramel); border-radius: 10px; background: var(--bg-card); color: var(--text-dark);">
-        <div id="admin-pin-error" style="color: #FF5A5F; font-size: 11px; margin-top: 8px; display:none;">Incorrect PIN. Try again.</div>
-        <div style="display:flex; gap:10px; justify-content:center; margin-top:18px;">
-          <button class="btn btn-secondary" id="cancel-pin-btn">Cancel</button>
-          <button class="btn btn-primary" id="confirm-pin-btn"><i class="fa-solid fa-unlock"></i> Confirm</button>
+      <div class="modal-body">
+        <input type="hidden" id="cust-target-item-name" value="">
+        <div class="cust-options-grid">
+          <!-- Size selection -->
+          <div class="cust-options-section">
+            <h4>Select Drink Size</h4>
+            <div class="cust-pills-row" id="cust-size-row">
+              <span class="cust-pill-opt active" data-size="Small">Small (+₹0)</span>
+              <span class="cust-pill-opt" data-size="Medium">Medium (+₹30)</span>
+              <span class="cust-pill-opt" data-size="Large">Large (+₹60)</span>
+            </div>
+          </div>
+
+          <!-- Sugar selection -->
+          <div class="cust-options-section">
+            <h4>Sugar Sweetness Level</h4>
+            <div class="cust-pills-row" id="cust-sugar-row">
+              <span class="cust-pill-opt" data-sugar="None">0%</span>
+              <span class="cust-pill-opt" data-sugar="Low">30%</span>
+              <span class="cust-pill-opt active" data-sugar="Regular">100%</span>
+              <span class="cust-pill-opt" data-sugar="Extra">110%</span>
+            </div>
+          </div>
+
+          <!-- Ice selection -->
+          <div class="cust-options-section">
+            <h4>Ice Level</h4>
+            <div class="cust-pills-row" id="cust-ice-row">
+              <span class="cust-pill-opt" data-ice="None">0%</span>
+              <span class="cust-pill-opt active" data-ice="Regular">100%</span>
+              <span class="cust-pill-opt" data-ice="Extra">120%</span>
+            </div>
+          </div>
+
+          <!-- Add-ons checklist -->
+          <div class="cust-options-section">
+            <h4>Premium Add-ons</h4>
+            <div class="cust-checkbox-item">
+              <label for="addon-shot">Extra Espresso Shot (+₹40)</label>
+              <input type="checkbox" id="addon-shot" style="width: 16px; height: 16px; accent-color: var(--accent-caramel);">
+            </div>
+            <div class="cust-checkbox-item">
+              <label for="addon-drizzle">Caramel Drizzle (+₹20)</label>
+              <input type="checkbox" id="addon-drizzle" style="width: 16px; height: 16px; accent-color: var(--accent-caramel);">
+            </div>
+            <div class="cust-checkbox-item">
+              <label for="addon-cream">Whipped Cream (+₹30)</label>
+              <input type="checkbox" id="addon-cream" style="width: 16px; height: 16px; accent-color: var(--accent-caramel);">
+            </div>
+          </div>
+
+          <!-- Prep Notes -->
+          <div class="form-group">
+            <label for="cust-item-notes">Special Prep Instructions / Notes</label>
+            <input type="text" id="cust-item-notes" placeholder="e.g. extra hot, no lid, hazelnut syrup...">
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+          <button class="btn btn-secondary" id="cancel-cust-btn">Cancel</button>
+          <button class="btn btn-primary" id="confirm-cust-btn"><i class="fa-solid fa-basket-shopping"></i> Add Customised</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- BUSINESS PROFILE MODAL -->
-  <div class="modal-backdrop" id="profile-modal">
-    <div class="glass-modal">
+  <!-- ADMIN PIN MODAL -->
+  <div class="modal-backdrop" id="admin-pin-modal">
+    <div class="glass-modal" style="max-width: 380px;">
       <div class="modal-header">
-        <h2><i class="fa-solid fa-store"></i> Business Profile</h2>
+        <h2><i class="fa-solid fa-shield-halved"></i> Admin Pin Verification</h2>
+        <button class="close-modal-btn" id="close-pin-modal">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align:center; padding: 20px;">
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Authorization PIN required to edit transactions.</p>
+        <input type="password" id="admin-pin-input" placeholder="••••" maxlength="6"
+          style="width: 120px; padding: 12px; text-align: center; font-size: 22px; font-weight: 700; letter-spacing: 6px;
+          border: 2px solid var(--accent-caramel); border-radius: 10px; background: var(--bg-card); color: var(--text-dark); outline:none;">
+        <div id="admin-pin-error" style="color: #FF5A5F; font-size: 11px; margin-top: 8px; display:none;">Incorrect PIN. Authorisation Failed.</div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:18px;">
+          <button class="btn btn-secondary" id="cancel-pin-btn">Cancel</button>
+          <button class="btn btn-primary" id="confirm-pin-btn"><i class="fa-solid fa-unlock"></i> Unlock</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUSINESS PROFILE CONTROL PANEL MODAL -->
+  <div class="modal-backdrop" id="profile-modal">
+    <div class="glass-modal" style="max-width: 720px;">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-store"></i> Doppio Cafe Settings Control</h2>
         <button class="close-modal-btn" id="close-profile-modal">&times;</button>
       </div>
-      <div class="modal-body">
-        <p style="color: var(--text-muted); font-size: 11px; line-height: 1.5; margin-bottom: 14px;">These details appear on every printed receipt and are synced to the cloud.</p>
-        <form id="business-profile-form">
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:5px; color:var(--text-dark);">Business Name</label>
-            <input type="text" id="profile-name-input" placeholder="e.g. Doppio Cafe" required
-              style="width:100%; padding:10px; border:1px solid rgba(44,27,24,0.15); border-radius:6px; background:rgba(255,255,255,0.5); font-size:13px; color:var(--text-dark);">
-          </div>
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:5px; color:var(--text-dark);">Address</label>
-            <input type="text" id="profile-address-input" placeholder="e.g. London Street, Nagpur" required
-              style="width:100%; padding:10px; border:1px solid rgba(44,27,24,0.15); border-radius:6px; background:rgba(255,255,255,0.5); font-size:13px; color:var(--text-dark);">
-          </div>
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:5px; color:var(--text-dark);">Phone Number</label>
-            <input type="text" id="profile-phone-input" placeholder="e.g. +91 91300 03177" required
-              style="width:100%; padding:10px; border:1px solid rgba(44,27,24,0.15); border-radius:6px; background:rgba(255,255,255,0.5); font-size:13px; color:var(--text-dark);">
+      <div class="modal-body settings-split-body">
+        
+        <!-- Left Side Settings Options -->
+        <div class="settings-form-container">
+          <div class="settings-tab-buttons">
+            <button class="settings-tab-btn active" data-settings-tab="info-sec">Business Info</button>
+            <button class="settings-tab-btn" data-settings-tab="billing-sec">Taxes & Loyalty</button>
           </div>
 
-          <!-- GST settings row -->
-          <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; margin-bottom: 14px; padding: 10px; background: rgba(44,27,24,0.03); border-radius: 8px; border: 1px solid rgba(44,27,24,0.06);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <input type="checkbox" id="profile-gst-enabled" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--accent-caramel);">
-              <label for="profile-gst-enabled" style="font-size:12px; font-weight:600; color:var(--text-dark); cursor: pointer; margin: 0; user-select: none;">Apply GST (Bill)</label>
+          <form id="business-profile-form">
+            <!-- Tab 1: Business Details -->
+            <div class="settings-tab-content" id="info-sec">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>Business / Branch Name</label>
+                <input type="text" id="profile-name-input" placeholder="e.g. Doppio Cafe Nagpur" required>
+              </div>
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>Address Details</label>
+                <input type="text" id="profile-address-input" placeholder="e.g. London Street, Nagpur" required>
+              </div>
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>Phone Number</label>
+                <input type="text" id="profile-phone-input" placeholder="e.g. +91 91300 03177" required>
+              </div>
             </div>
-            <div>
-              <label style="display:block; font-size:10px; font-weight:600; margin-bottom:3px; color:var(--text-dark);">GST Rate (%)</label>
-              <input type="number" id="profile-gst-rate" value="18" min="0" max="100" step="0.5"
-                style="width:100%; padding:6px; border:1px solid rgba(44,27,24,0.15); border-radius:4px; background:rgba(255,255,255,0.7); font-size:12px; color:var(--text-dark);">
-            </div>
-          </div>
 
-          <!-- Loyalty Discount Settings -->
-          <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; margin-bottom: 14px; padding: 10px; background: rgba(44,27,24,0.03); border-radius: 8px; border: 1px solid rgba(44,27,24,0.06);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <input type="checkbox" id="profile-loyalty-enabled" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--accent-caramel);">
-              <label for="profile-loyalty-enabled" style="font-size:12px; font-weight:600; color:var(--text-dark); cursor: pointer; margin: 0; user-select: none;">Loyalty Discount</label>
+            <!-- Tab 2: Billing Config -->
+            <div class="settings-tab-content" id="billing-sec" style="display:none;">
+              <!-- GST toggle switch -->
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; background:rgba(43,24,19,0.03); padding:10px; border-radius:8px;">
+                <span style="font-size:12px; font-weight:600; color:var(--text-dark);">Apply GST Rate on Invoices</span>
+                <label class="switch">
+                  <input type="checkbox" id="profile-gst-enabled">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>GST Percentage Rate (%)</label>
+                <input type="number" id="profile-gst-rate" value="18" min="0" max="100" step="0.5">
+              </div>
+
+              <!-- Loyalty toggle switch -->
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; background:rgba(43,24,19,0.03); padding:10px; border-radius:8px;">
+                <span style="font-size:12px; font-weight:600; color:var(--text-dark);">Loyalty Reward Discounts</span>
+                <label class="switch">
+                  <input type="checkbox" id="profile-loyalty-enabled">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>Repeat Customer Discount (%)</label>
+                <input type="number" id="profile-loyalty-rate" value="10" min="0" max="100" step="0.5">
+              </div>
             </div>
-            <div>
-              <label style="display:block; font-size:10px; font-weight:600; margin-bottom:3px; color:var(--text-dark);">Discount (%)</label>
-              <input type="number" id="profile-loyalty-rate" value="10" min="0" max="100" step="0.5"
-                style="width:100%; padding:6px; border:1px solid rgba(44,27,24,0.15); border-radius:4px; background:rgba(255,255,255,0.7); font-size:12px; color:var(--text-dark);">
+
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+              <button type="button" class="btn btn-secondary" id="cancel-profile-btn">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="save-profile-btn"><i class="fa-solid fa-floppy-disk"></i> Save & Backup</button>
             </div>
+          </form>
+        </div>
+
+        <!-- Right Side Live Receipt Preview simulator -->
+        <div class="live-receipt-simulator">
+          <div style="text-align:center; font-weight:700; border-bottom:1px dashed #777; padding-bottom:8px; margin-bottom:8px; text-transform:uppercase;">
+            Receipt Preview
           </div>
-          <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:10px;">
-            <button type="button" class="btn btn-secondary" id="cancel-profile-btn">Cancel</button>
-            <button type="submit" class="btn btn-primary" id="save-profile-btn"><i class="fa-solid fa-floppy-disk"></i> Save Profile</button>
+          <div id="receipt-preview-store-name" style="font-weight:700; text-align:center;">DOPPIO CAFE</div>
+          <div id="receipt-preview-address" style="text-align:center;">London Street, Nagpur</div>
+          <div id="receipt-preview-phone" style="text-align:center; margin-bottom:6px;">Ph: +91 91300 03177</div>
+          
+          <div style="border-bottom:1px dashed #777; padding-bottom:4px; margin-bottom:4px; font-size:9px;">
+            Bill ID: DO-1002 <span style="float:right;">Type: Takeaway</span>
           </div>
-        </form>
+          
+          <table style="width:100%; border-collapse:collapse; font-size:9px; margin-bottom:6px;">
+            <tr>
+              <td>Cappuccino (Medium)</td>
+              <td style="text-align:center;">x1</td>
+              <td style="text-align:right;">₹259</td>
+            </tr>
+          </table>
+
+          <div style="border-top:1px dashed #777; padding-top:4px; text-align:right; font-size:9px;">
+            Subtotal: ₹259.00<br>
+            <span id="receipt-preview-tax-line">GST (18%): ₹46.62</span><br>
+            <span style="font-weight:700;">Total: ₹305.62</span>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
