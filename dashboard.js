@@ -444,8 +444,91 @@ document.addEventListener('DOMContentLoaded', () => {
     return map[key] || key.replace('_', ' ');
   }
 
+  // ==========================================
+  // POLLING FALLBACK SYNC (every 30s)
+  // Guarantees cross-device sync even if WebSocket/Realtime drops
+  // ==========================================
+  let pollSyncInterval = null;
+
+  async function pollSyncFromSupabase() {
+    if (!supabaseClient) return;
+    try {
+      // Sync Bills — detect any change: added, deleted, or edited
+      const { data: dbBills, error: billsErr } = await supabaseClient
+        .from('doppio_bills').select('*').order('created_at', { ascending: true });
+      if (!billsErr && dbBills) {
+        const remoteLastId = dbBills.length > 0 ? dbBills[dbBills.length - 1].orderId : null;
+        const localLastId = bills.length > 0 ? bills[bills.length - 1].orderId : null;
+        const countChanged = dbBills.length !== bills.length;
+        const lastIdChanged = remoteLastId !== localLastId;
+        if (countChanged || lastIdChanged) {
+          bills = dbBills.map(b => ({
+            orderId: b.orderId,
+            customerName: b.customerName,
+            dateTime: b.dateTime,
+            items: typeof b.items === 'string' ? JSON.parse(b.items) : b.items,
+            subtotal: b.subtotal,
+            gst: b.gst,
+            total: b.total,
+            paymentMethod: b.paymentMethod
+          }));
+          localStorage.setItem('doppio_bills', JSON.stringify(bills));
+          if (document.getElementById('bills-table-body')) renderBills();
+          generateOrderNumber();
+          if (document.getElementById('report-total-revenue')) renderReports();
+        }
+      }
+
+      // Sync Inventory
+      const { data: dbInv, error: invErr } = await supabaseClient
+        .from('doppio_inventory').select('*');
+      if (!invErr && dbInv && dbInv.length > 0) {
+        let changed = false;
+        dbInv.forEach(row => {
+          if (inventory[row.key] !== row.current) {
+            inventory[row.key] = row.current;
+            changed = true;
+          }
+        });
+        if (changed) {
+          localStorage.setItem('doppio_inventory', JSON.stringify(inventory));
+          if (document.getElementById('inventory-grid')) renderInventory();
+          checkLowStockAlerts();
+        }
+      }
+
+      // Sync Menu
+      const { data: dbMenu, error: menuErr } = await supabaseClient
+        .from('doppio_menu').select('*').order('id', { ascending: true });
+      if (!menuErr && dbMenu && dbMenu.length > 0 && dbMenu.length !== menu.length) {
+        menu = dbMenu;
+        localStorage.setItem('doppio_menu', JSON.stringify(menu));
+        renderPOSCategories();
+        renderPOSItems();
+        if (document.getElementById('editor-items-grid')) renderMenuEditor();
+      }
+    } catch (e) {
+      // Silent fail — polling is a background safety net
+    }
+  }
+
+  function startPollSync() {
+    if (pollSyncInterval) clearInterval(pollSyncInterval);
+    pollSyncInterval = setInterval(pollSyncFromSupabase, 30000);
+  }
+
+  // Sync immediately when tab becomes visible (device wakes up, user switches tabs)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && supabaseClient) {
+      pollSyncFromSupabase();
+    }
+  });
+
   function setupSupabaseRealtime() {
     if (!supabaseClient) return;
+
+    // Start the polling fallback
+    startPollSync();
 
     supabaseClient.channel('doppio-bills-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'doppio_bills' }, payload => {
