@@ -270,6 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   let supabaseClient = null;
 
+  const DEFAULT_SUPABASE_URL = 'https://htkauiibuejetimfiavs.supabase.co';
+  const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0a2F1aWlidWVqZXRpbWZpYXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NTc2OTIsImV4cCI6MjA5NTQzMzY5Mn0.NsQ-nJqXlvPfW9lHuapz8w-2rnHwxIfQwt4XoPk7uyk';
+
   function sanitizeSupabaseUrl(url) {
     if (!url) return '';
     let clean = url.trim();
@@ -286,9 +289,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function initSupabase() {
-    let url = localStorage.getItem('doppio_supabase_url');
+    let url = localStorage.getItem('doppio_supabase_url') || DEFAULT_SUPABASE_URL;
     url = sanitizeSupabaseUrl(url);
-    const key = localStorage.getItem('doppio_supabase_key');
+    const key = localStorage.getItem('doppio_supabase_key') || DEFAULT_SUPABASE_KEY;
     const syncDot = document.getElementById('supabase-sync-dot');
     const syncText = document.getElementById('supabase-sync-text');
     const statusDot = document.getElementById('status-indicator-dot');
