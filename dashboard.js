@@ -1655,8 +1655,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (syncTrigger && supabaseModal) {
     syncTrigger.addEventListener('click', () => {
-      supabaseModal.classList.add('active');
-      initSupabase(); // refresh values
+      const pin = prompt('Enter Admin Password/PIN to access Supabase Live Sync setup:');
+      if (pin === 'diva123' || pin === '7860') {
+        supabaseModal.classList.add('active');
+        initSupabase(); // refresh values
+      } else if (pin !== null) {
+        alert('Invalid Admin Password/PIN. Access Denied.');
+      }
     });
   }
 
