@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doppio Cafe | Staff Dashboard & Takeaway POS</title>
+  <link rel="stylesheet" href="dashboard-styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Hidden Printable Thermal Receipt Container -->
+  <div id="thermal-receipt" class="thermal-print-area">
+    <!-- Formatted dynamically in JS -->
+  </div>
+
+  <div class="dashboard-wrapper">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-doppio">DOPPIO</span>
+        <span class="brand-cafe">Café</span>
+      </div>
+      
+      <div class="user-pill">
+        <div class="avatar">B</div>
+        <div class="user-details">
+          <span class="user-name">bonie</span>
+          <span class="user-role">Cashier / Staff</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-menu">
+        <a href="#" class="sidebar-link active" data-tab="pos-tab"><i class="fa-solid fa-mug-hot"></i> Takeaway POS</a>
+        <a href="#" class="sidebar-link" data-tab="bills-tab"><i class="fa-solid fa-file-invoice-dollar"></i> Bills Management</a>
+        <a href="#" class="sidebar-link" data-tab="inventory-tab"><i class="fa-solid fa-boxes-stacked"></i> Inventory Control</a>
+        <a href="#" class="sidebar-link" data-tab="reports-tab"><i class="fa-solid fa-chart-line"></i> Sales Reports</a>
+        <a href="#" class="sidebar-link" data-tab="editor-tab"><i class="fa-solid fa-pen-to-square"></i> Menu Editor</a>
+      </nav>
+
+      <a href="index.html" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Logout Portal</a>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      <!-- Header bar -->
+      <header class="dashboard-header">
+        <div class="header-left">
+          <h1 id="tab-title">Takeaway POS</h1>
+          <span id="tab-subtitle">Default Tab: Selection Grid</span>
+        </div>
+        <div class="header-right">
+          <!-- Database Sync Status Indicator -->
+          <div class="sync-pill" title="Supabase Database Live Synchronization">
+            <span class="sync-dot blinking"></span>
+            <span class="sync-text"><i class="fa-solid fa-cloud-arrow-up"></i> Supabase Live</span>
+          </div>
+          <div class="dateTime" id="dateTime">May 27, 2026 12:00 PM</div>
+        </div>
+      </header>
+
+      <!-- Alert Banners container for Low Inventory Notifications -->
+      <div class="alert-container" id="low-stock-alerts">
+        <!-- Injected dynamically in JS -->
+      </div>
+
+      <!-- Tab Content Workspace -->
+      <div class="workspace-area">
+
+        <!-- TAB 1: TAKEAWAY POS (DEFAULT TAB) -->
+        <div class="tab-content active" id="pos-tab">
+          <div class="pos-layout">
+            <!-- Menu Column -->
+            <div class="pos-menu-side">
+              <div class="pos-search-bar">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="pos-search" placeholder="Quick search drink/food item...">
+              </div>
+              <div class="pos-categories" id="pos-categories">
+                <!-- Categories rendered dynamically -->
+              </div>
+              <div class="pos-items-grid" id="pos-items-grid">
+                <!-- POS Touch Cards injected dynamically -->
+              </div>
+            </div>
+
+            <!-- Cart Sidebar -->
+            <div class="pos-cart-side">
+              <div class="cart-header">
+                <h2>Takeaway Cart</h2>
+                <button class="clear-cart-btn" id="clear-cart"><i class="fa-solid fa-trash-can"></i> Clear</button>
+              </div>
+
+              <!-- Takeaway Customer Fields -->
+              <div class="takeaway-fields">
+                <div class="form-group">
+                  <label for="cust-name">Customer Name</label>
+                  <input type="text" id="cust-name" placeholder="Enter name (e.g. Amit)">
+                </div>
+                <div class="form-group">
+                  <label for="order-num">Takeaway Order #</label>
+                  <input type="text" id="order-num" placeholder="Auto-generated" readonly>
+                </div>
+              </div>
+
+              <!-- Cart list -->
+              <div class="cart-items-list" id="cart-items-list">
+                <div class="empty-cart-state">
+                  <i class="fa-solid fa-basket-shopping"></i>
+                  <p>Cart is currently empty.<br>Tap items to add.</p>
+                </div>
+              </div>
+
+              <!-- Checkout Summary -->
+              <div class="cart-summary">
+                <div class="summary-row">
+                  <span>Subtotal</span>
+                  <span id="cart-subtotal">₹0.00</span>
+                </div>
+                <div class="summary-row">
+                  <span>GST (18%)</span>
+                  <span id="cart-gst">₹0.00</span>
+                </div>
+                <div class="summary-row total-row">
+                  <span>Total Amount</span>
+                  <span id="cart-total">₹0.00</span>
+                </div>
+
+                <div class="payment-selection">
+                  <label>Payment Method</label>
+                  <div class="payment-methods">
+                    <button class="pay-method-btn active" data-method="UPI"><i class="fa-solid fa-mobile-screen-button"></i> UPI</button>
+                    <button class="pay-method-btn" data-method="Cash"><i class="fa-solid fa-money-bill-1"></i> Cash</button>
+                    <button class="pay-method-btn" data-method="Card"><i class="fa-solid fa-credit-card"></i> Card</button>
+                  </div>
+                </div>
+
+                <button class="checkout-btn" id="checkout-btn"><i class="fa-solid fa-cash-register"></i> Complete Checkout & Print</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: BILLS MANAGEMENT -->
+        <div class="tab-content" id="bills-tab">
+          <div class="bills-controls">
+            <div class="bills-search">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="bills-search-input" placeholder="Search by customer name or bill ID...">
+            </div>
+            <div class="bills-actions">
+              <span class="results-count" id="bills-count">Showing 0 Bills</span>
+            </div>
+          </div>
+
+          <div class="bills-table-container">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Customer Name</th>
+                  <th>Date & Time</th>
+                  <th>Items Ordered</th>
+                  <th>Payment</th>
+                  <th>Amount</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bills-table-body">
+                <!-- Bills rows injected dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 3: INVENTORY CONTROL -->
+        <div class="tab-content" id="inventory-tab">
+          <div class="inventory-header-actions">
+            <h2>Ingredient & Stock Levels</h2>
+            <button class="btn btn-primary" id="restock-inventory-btn"><i class="fa-solid fa-rotate-left"></i> Reset to Full (3.0 kg / 300 units)</button>
+          </div>
+
+          <div class="inventory-grid" id="inventory-grid">
+            <!-- Inventory bars injected dynamically -->
+          </div>
+        </div>
+
+        <!-- TAB 4: SALES REPORTS -->
+        <div class="tab-content" id="reports-tab">
+          <div class="reports-header-actions">
+            <div class="report-filters">
+              <span class="report-span">Doppio Nagpur Sales Overview</span>
+            </div>
+            <div class="export-actions">
+              <button class="export-btn excel" id="export-excel-btn"><i class="fa-solid fa-file-excel"></i> Export Excel (CSV)</button>
+              <button class="export-btn pdf" id="export-pdf-btn"><i class="fa-solid fa-file-pdf"></i> Export Sales PDF</button>
+            </div>
+          </div>
+
+          <!-- Sales Cards -->
+          <div class="sales-cards">
+            <div class="sales-card">
+              <div class="sales-card-icon green"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+              <div class="sales-card-details">
+                <h3 id="report-total-revenue">₹0.00</h3>
+                <p>Total Revenue</p>
+              </div>
+            </div>
+            <div class="sales-card">
+              <div class="sales-card-icon blue"><i class="fa-solid fa-receipt"></i></div>
+              <div class="sales-card-details">
+                <h3 id="report-total-orders">0</h3>
+                <p>Takeaway Orders Placed</p>
+              </div>
+            </div>
+            <div class="sales-card">
+              <div class="sales-card-icon orange"><i class="fa-solid fa-mug-hot"></i></div>
+              <div class="sales-card-details">
+                <h3 id="report-top-item">-</h3>
+                <p>Top Drink Selection</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="reports-columns">
+            <!-- Left Side: Order Log Summary -->
+            <div class="report-panel">
+              <h3>Order Ledger Logs</h3>
+              <div class="report-ledger-list" id="report-ledger-list">
+                <!-- Ledger items dynamically -->
+              </div>
+            </div>
+
+            <!-- Right Side: Analytics breakdown -->
+            <div class="report-panel">
+              <h3>Ingredient Resource Consumption</h3>
+              <div class="ingredient-stats-list" id="ingredient-stats-list">
+                <!-- Ingredient breakdown dynamic -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 5: MENU EDITOR -->
+        <div class="tab-content" id="editor-tab">
+          <div class="editor-header">
+            <h2>Add or Edit Menu Items</h2>
+            <button class="btn btn-primary" id="add-new-menu-btn"><i class="fa-solid fa-plus"></i> Add New Menu Item</button>
+          </div>
+
+          <div class="menu-editor-layout">
+            <!-- Left Side: Form for Adding/Editing -->
+            <div class="menu-editor-form-panel" id="editor-form-panel">
+              <h3 id="form-panel-title">Add New Menu Item</h3>
+              <form id="menu-item-editor-form">
+                <input type="hidden" id="edit-item-index" value="">
+                
+                <div class="form-group">
+                  <label for="item-name-input">Item Name</label>
+                  <input type="text" id="item-name-input" placeholder="e.g. Hazelnut Latte" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="item-category-input">Category</label>
+                  <select id="item-category-input" required>
+                    <option value="COLD COFFEE">Cold Coffee</option>
+                    <option value="HOT COFFEE">Hot Coffee</option>
+                    <option value="MATCHA">Matcha</option>
+                    <option value="FRIES & SHARE PLATES">Fries & Plates</option>
+                    <option value="MOCKTAILS">Mocktails</option>
+                    <option value="SANDWICHES">Sandwiches</option>
+                    <option value="THICK SHAKES">Thick Shakes</option>
+                    <option value="CLASSIC TOAST">Classic Toast</option>
+                    <option value="EGGS">Eggs</option>
+                    <option value="APPETIZERS">Appetizers</option>
+                    <option value="COMBOS">Combos</option>
+                    <option value="PASTA">Pasta</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="item-price-input">Price (₹)</label>
+                  <input type="number" id="item-price-input" placeholder="e.g. 299" required min="1">
+                </div>
+
+                <div class="form-group">
+                  <label for="item-desc-input">Description</label>
+                  <textarea id="item-desc-input" placeholder="Enter details..." required rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="item-icon-input">Emoji Icon</label>
+                  <input type="text" id="item-icon-input" placeholder="e.g. ☕" required>
+                </div>
+
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="save-item-btn">Save Menu Item</button>
+                  <button type="button" class="btn btn-secondary" id="cancel-edit-btn" style="color: var(--primary-brand); border-color: var(--primary-brand);">Cancel</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Right Side: Interactive item grid with edit/delete buttons -->
+            <div class="menu-editor-list-panel">
+              <h3>All Menu Items</h3>
+              <div class="menu-editor-grid" id="editor-items-grid">
+                <!-- Menu Items with edit controls will render here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
