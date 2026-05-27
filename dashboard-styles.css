@@ -1498,3 +1498,100 @@ body {
     gap: 12px;
   }
 }
+
+/* ==========================================
+ * SUPABASE SETTINGS GLASSMODAL STYLING
+ * ========================================== */
+#supabase-modal.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(44, 27, 24, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 1100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#supabase-modal.modal-backdrop.active {
+  display: flex;
+  opacity: 1;
+}
+
+#supabase-modal .glass-modal {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 440px;
+  padding: 28px;
+  box-shadow: 0 20px 40px rgba(44, 27, 24, 0.15);
+  transform: translateY(-20px);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#supabase-modal.modal-backdrop.active .glass-modal {
+  transform: translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.modal-header h2 {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  color: var(--primary-brand);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+  transition: var(--transition);
+}
+
+.close-modal-btn:hover {
+  color: var(--accent-caramel);
+  transform: rotate(90deg);
+}
+
+/* Glowing Sync Indicator States */
+.sync-dot.connected {
+  background-color: #2ecc71 !important;
+  box-shadow: 0 0 8px #2ecc71 !important;
+  animation: none !important;
+}
+
+.sync-dot.disconnected {
+  background-color: #FF5A5F !important;
+  box-shadow: 0 0 8px #FF5A5F !important;
+  animation: none !important;
+}
+
+.status-indicator-dot.green {
+  background-color: #2ecc71 !important;
+  box-shadow: 0 0 6px #2ecc71;
+}
+
+.status-indicator-dot.red {
+  background-color: #FF5A5F !important;
+  box-shadow: 0 0 6px #FF5A5F;
+}
+

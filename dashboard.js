@@ -266,6 +266,255 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedPaymentMethod = 'UPI';
 
   // ==========================================
+  // 1b. SUPABASE CLOUD SYNC CONTROLLER & INITIALIZATION
+  // ==========================================
+  let supabaseClient = null;
+
+  function initSupabase() {
+    const url = localStorage.getItem('doppio_supabase_url');
+    const key = localStorage.getItem('doppio_supabase_key');
+    const syncDot = document.getElementById('supabase-sync-dot');
+    const syncText = document.getElementById('supabase-sync-text');
+    const statusDot = document.getElementById('status-indicator-dot');
+    const statusText = document.getElementById('status-indicator-text');
+    const disconnectBtn = document.getElementById('disconnect-supabase-btn');
+
+    if (url && key && typeof supabase !== 'undefined') {
+      try {
+        supabaseClient = supabase.createClient(url, key);
+        
+        // Update UI Indicators
+        if (syncDot) { syncDot.className = 'sync-dot connected'; }
+        if (syncText) { syncText.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Supabase Live'; }
+        if (statusDot) { statusDot.className = 'status-indicator-dot green'; }
+        if (statusText) { statusText.textContent = 'Connected (Cloud Syncing Live)'; }
+        if (disconnectBtn) { disconnectBtn.style.display = 'block'; }
+        
+        // Pre-fill inputs in modal
+        const urlInput = document.getElementById('supabase-url-input');
+        const keyInput = document.getElementById('supabase-key-input');
+        if (urlInput) urlInput.value = url;
+        if (keyInput) keyInput.value = key;
+
+        // Perform Initial Sync
+        syncWithSupabase();
+        
+        // Setup Realtime Listeners
+        setupSupabaseRealtime();
+      } catch (err) {
+        console.error("Failed to initialize Supabase client:", err);
+      }
+    } else {
+      supabaseClient = null;
+      if (syncDot) { syncDot.className = 'sync-dot disconnected blinking'; }
+      if (syncText) { syncText.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Supabase Offline'; }
+      if (statusDot) { statusDot.className = 'status-indicator-dot red'; }
+      if (statusText) { statusText.textContent = 'Disconnected (Local Offline Mode)'; }
+      if (disconnectBtn) { disconnectBtn.style.display = 'none'; }
+    }
+  }
+
+  async function syncWithSupabase() {
+    if (!supabaseClient) return;
+
+    try {
+      // 1. Sync Menu Items
+      const { data: dbMenu, error: menuErr } = await supabaseClient.from('doppio_menu').select('*').order('id', { ascending: true });
+      if (!menuErr && dbMenu) {
+        if (dbMenu.length > 0) {
+          menu = dbMenu;
+          localStorage.setItem('doppio_menu', JSON.stringify(menu));
+          renderPOSCategories();
+          renderPOSItems();
+          if (document.getElementById('editor-items-grid')) renderMenuEditor();
+        } else {
+          // Supabase is empty, bootstrap it with our local default menu!
+          for (let item of menu) {
+            await supabaseClient.from('doppio_menu').insert({
+              name: item.name,
+              description: item.description || '',
+              price: item.price,
+              category: item.category,
+              icon: item.icon
+            });
+          }
+        }
+      }
+
+      // 2. Sync Inventory
+      const { data: dbInv, error: invErr } = await supabaseClient.from('doppio_inventory').select('*');
+      if (!invErr && dbInv) {
+        if (dbInv.length > 0) {
+          dbInv.forEach(row => {
+            inventory[row.key] = row.current;
+          });
+          localStorage.setItem('doppio_inventory', JSON.stringify(inventory));
+          if (document.getElementById('inventory-grid')) renderInventory();
+          checkLowStockAlerts();
+        } else {
+          // Bootstrap inventory table
+          for (let key of Object.keys(inventory)) {
+            const label = getLabelFromKey(key);
+            const maxVal = defaultInventory[key];
+            const unit = key.includes('cups') || key.includes('packs') || ['biscuit', 'oreo', 'tea_bags', 'mint_leaves'].includes(key) ? 'pcs' : (key.includes('milk') || key.includes('syrup') || key.includes('sauce') || key.includes('cream') || key.includes('juice') || key.includes('soda') || ['ginger_ale', 'tonic_water', 'cold_brew', 'sprite', 'blue_curacao', 'tobasco', 'lemon_juice', 'litchi_crush'].includes(key) ? 'ml' : 'g');
+            await supabaseClient.from('doppio_inventory').insert({
+              key: key,
+              label: label,
+              current: inventory[key],
+              max: maxVal,
+              unit: unit
+            });
+          }
+        }
+      }
+
+      // 3. Sync Bills
+      const { data: dbBills, error: billsErr } = await supabaseClient.from('doppio_bills').select('*').order('created_at', { ascending: true });
+      if (!billsErr && dbBills) {
+        if (dbBills.length > 0) {
+          bills = dbBills.map(b => ({
+            orderId: b.orderId,
+            customerName: b.customerName,
+            dateTime: b.dateTime,
+            items: typeof b.items === 'string' ? JSON.parse(b.items) : b.items,
+            subtotal: b.subtotal,
+            gst: b.gst,
+            total: b.total,
+            paymentMethod: b.paymentMethod
+          }));
+          localStorage.setItem('doppio_bills', JSON.stringify(bills));
+          if (document.getElementById('bills-table-body')) renderBills();
+          generateOrderNumber();
+        } else {
+          // Push existing bills to Supabase (if any)
+          for (let bill of bills) {
+            await supabaseClient.from('doppio_bills').insert({
+              orderId: bill.orderId,
+              customerName: bill.customerName,
+              dateTime: bill.dateTime,
+              items: bill.items,
+              subtotal: bill.subtotal,
+              gst: bill.gst,
+              total: bill.total,
+              paymentMethod: bill.paymentMethod
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error running active cloud synchronization:", err);
+    }
+  }
+
+  function getLabelFromKey(key) {
+    const map = {
+      coffee_beans: 'Coffee Beans', steamed_milk: 'Steamed Milk', matcha_powder: 'Matcha Powder',
+      cocoa_powder: 'Cocoa Powder', vanilla_ice_cream: 'Vanilla Ice Cream', whipped_cream: 'Whipped Cream',
+      caramel_syrup: 'Caramel Syrup', chocolate_sauce: 'Chocolate Sauce', hazelnut_syrup: 'Hazelnut Syrup',
+      strawberry_crush: 'Strawberry Crush', mango_crush: 'Mango Crush', guava_juice: 'Guava Juice',
+      soda: 'Soda Base', lemon_juice: 'Lemon Juice', nutella: 'Premium Nutella', vanilla_syrup: 'Vanilla Syrup',
+      irish_syrup: 'Irish Syrup', biscoff_spread: 'Biscoff Spread', biscuit: 'Biscoff Biscuit',
+      oreo: 'Oreo Biscuit', choco_chip: 'Choco Chips', brownie: 'Chocolate Brownie', ginger_ale: 'Ginger Ale',
+      tonic_water: 'Tonic Water', cranberry_juice: 'Cranberry Juice', orange_juice: 'Orange Juice',
+      condensed_milk: 'Condensed Milk', cold_brew: 'Cold Brew Base', passion_fruit_syrup: 'Passion Fruit Syrup',
+      peach_syrup: 'Peach Syrup', basil_syrup: 'Basil Syrup', mint_syrup: 'Mint Syrup', sprite: 'Sprite Soda',
+      blue_curacao: 'Blue Curacao Syrup', tea_bags: 'Tea Bags', litchi_crush: 'Litchi Crush',
+      tobasco: 'Tabasco Sauce', chilly_powder: 'Chili Powder', mint_leaves: 'Fresh Mint Leaves',
+      hot_cups: 'Hot Takeaway Cups', cold_cups: 'Cold Takeaway Cups', snack_packs: 'Takeaway Food Boxes'
+    };
+    return map[key] || key.replace('_', ' ');
+  }
+
+  function setupSupabaseRealtime() {
+    if (!supabaseClient) return;
+
+    supabaseClient.channel('doppio-bills-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'doppio_bills' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          const newBill = payload.new;
+          newBill.items = typeof newBill.items === 'string' ? JSON.parse(newBill.items) : newBill.items;
+          if (!bills.some(b => b.orderId === newBill.orderId)) {
+            bills.push(newBill);
+            localStorage.setItem('doppio_bills', JSON.stringify(bills));
+            if (document.getElementById('bills-table-body')) renderBills();
+            generateOrderNumber();
+            if (document.getElementById('report-total-revenue')) renderReports();
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = payload.new;
+          const idx = bills.findIndex(b => b.orderId === updated.orderId);
+          if (idx !== -1) {
+            bills[idx] = {
+              ...bills[idx],
+              ...updated,
+              items: typeof updated.items === 'string' ? JSON.parse(updated.items) : updated.items
+            };
+            localStorage.setItem('doppio_bills', JSON.stringify(bills));
+            if (document.getElementById('bills-table-body')) renderBills();
+            if (document.getElementById('report-total-revenue')) renderReports();
+          }
+        } else if (payload.eventType === 'DELETE') {
+          const deletedId = payload.old.orderId;
+          bills = bills.filter(b => b.orderId !== deletedId);
+          localStorage.setItem('doppio_bills', JSON.stringify(bills));
+          if (document.getElementById('bills-table-body')) renderBills();
+          generateOrderNumber();
+          if (document.getElementById('report-total-revenue')) renderReports();
+        }
+      })
+      .subscribe();
+
+    supabaseClient.channel('doppio-inventory-realtime')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'doppio_inventory' }, payload => {
+        const updatedRow = payload.new;
+        if (inventory[updatedRow.key] !== updatedRow.current) {
+          inventory[updatedRow.key] = updatedRow.current;
+          localStorage.setItem('doppio_inventory', JSON.stringify(inventory));
+          if (document.getElementById('inventory-grid')) renderInventory();
+          checkLowStockAlerts();
+          if (document.getElementById('report-total-revenue')) renderReports();
+        }
+      })
+      .subscribe();
+
+    supabaseClient.channel('doppio-menu-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'doppio_menu' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          const newItem = payload.new;
+          if (!menu.some(m => m.name === newItem.name)) {
+            menu.push(newItem);
+            localStorage.setItem('doppio_menu', JSON.stringify(menu));
+            renderPOSCategories();
+            renderPOSItems();
+            if (document.getElementById('editor-items-grid')) renderMenuEditor();
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = payload.new;
+          const idx = menu.findIndex(m => m.name === updated.name);
+          if (idx !== -1) {
+            menu[idx] = updated;
+            localStorage.setItem('doppio_menu', JSON.stringify(menu));
+            renderPOSCategories();
+            renderPOSItems();
+            if (document.getElementById('editor-items-grid')) renderMenuEditor();
+          }
+        } else if (payload.eventType === 'DELETE') {
+          supabaseClient.from('doppio_menu').select('*').order('id', { ascending: true })
+            .then(({ data }) => {
+              if (data) {
+                menu = data;
+                localStorage.setItem('doppio_menu', JSON.stringify(menu));
+                renderPOSCategories();
+                renderPOSItems();
+                if (document.getElementById('editor-items-grid')) renderMenuEditor();
+              }
+            });
+        }
+      })
+      .subscribe();
+  }
+
+  // ==========================================
   // 2. CORE LAYOUT & NAVIGATION
   // ==========================================
   function updateDateTime() {
@@ -531,6 +780,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // Perform deduction
       Object.keys(proposedDeductions).forEach(ing => {
         inventory[ing] -= proposedDeductions[ing];
+        
+        // Supabase mirror update
+        if (supabaseClient) {
+          supabaseClient.from('doppio_inventory')
+            .update({ current: inventory[ing] })
+            .eq('key', ing)
+            .then(({ error }) => { if (error) console.error("Error updating stock in cloud:", error); });
+        }
       });
       localStorage.setItem('doppio_inventory', JSON.stringify(inventory));
 
@@ -553,6 +810,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       bills.push(newBill);
       localStorage.setItem('doppio_bills', JSON.stringify(bills));
+
+      // Supabase mirror insert
+      if (supabaseClient) {
+        supabaseClient.from('doppio_bills').insert({
+          orderId: newBill.orderId,
+          customerName: newBill.customerName,
+          dateTime: newBill.dateTime,
+          items: newBill.items,
+          subtotal: newBill.subtotal,
+          gst: newBill.gst,
+          total: newBill.total,
+          paymentMethod: newBill.paymentMethod
+        }).then(({ error }) => { if (error) console.error("Error syncing bill to cloud:", error); });
+      }
 
       // Print
       triggerThermalReceiptPrint(newBill);
@@ -735,6 +1006,14 @@ document.addEventListener('DOMContentLoaded', () => {
           bills[targetBillIndex].customerName = newName.trim();
           localStorage.setItem('doppio_bills', JSON.stringify(bills));
           renderBills();
+
+          // Supabase mirror edit
+          if (supabaseClient) {
+            supabaseClient.from('doppio_bills')
+              .update({ customerName: newName.trim() })
+              .eq('orderId', orderId)
+              .then(({ error }) => { if (error) console.error("Error editing bill in cloud:", error); });
+          }
         }
       } else if (btn.classList.contains('delete')) {
         if (confirm(`Are you sure you want to delete bill ${orderId}? This will restore ingredients.`)) {
@@ -743,12 +1022,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const specs = getDeductionSpecs(cartItem);
             Object.keys(specs).forEach(ing => {
               inventory[ing] += (specs[ing] * cartItem.qty);
+
+              // Supabase mirror revert inventory
+              if (supabaseClient) {
+                supabaseClient.from('doppio_inventory')
+                  .update({ current: inventory[ing] })
+                  .eq('key', ing)
+                  .then(({ error }) => { if (error) console.error("Error reverting stock in cloud:", error); });
+              }
             });
           });
           localStorage.setItem('doppio_inventory', JSON.stringify(inventory));
           
           bills.splice(targetBillIndex, 1);
           localStorage.setItem('doppio_bills', JSON.stringify(bills));
+
+          // Supabase mirror delete bill
+          if (supabaseClient) {
+            supabaseClient.from('doppio_bills')
+              .delete()
+              .eq('orderId', orderId)
+              .then(({ error }) => { if (error) console.error("Error deleting bill from cloud:", error); });
+          }
+
           renderBills();
           checkLowStockAlerts();
         }
@@ -860,6 +1156,17 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('doppio_inventory', JSON.stringify(inventory));
       renderInventory();
       checkLowStockAlerts();
+
+      // Supabase mirror restock
+      if (supabaseClient) {
+        Object.keys(inventory).forEach(ing => {
+          supabaseClient.from('doppio_inventory')
+            .update({ current: inventory[ing] })
+            .eq('key', ing)
+            .then(({ error }) => { if (error) console.error("Error restocking ingredient in cloud:", error); });
+        });
+      }
+
       alert('Nagpur Inventory successfully restocked to full Excel standard capacity (30+ ingredients)!');
     });
   }
@@ -1126,8 +1433,19 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('save-item-btn').textContent = 'Update Item';
       } else if (btn.classList.contains('delete')) {
         if (confirm(`Are you sure you want to delete ${menu[index].name} from the menu?`)) {
+          const itemToDelete = menu[index];
+          
           menu.splice(index, 1);
           localStorage.setItem('doppio_menu', JSON.stringify(menu));
+
+          // Supabase mirror delete
+          if (supabaseClient) {
+            supabaseClient.from('doppio_menu')
+              .delete()
+              .eq('name', itemToDelete.name)
+              .then(({ error }) => { if (error) console.error("Error deleting menu item in cloud:", error); });
+          }
+
           renderMenuEditor();
           renderPOSCategories();
           renderPOSItems();
@@ -1169,9 +1487,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (indexStr === '') {
         menu.push(newItem);
+
+        // Supabase mirror insert
+        if (supabaseClient) {
+          supabaseClient.from('doppio_menu')
+            .insert({
+              name: newItem.name,
+              description: newItem.description || '',
+              price: newItem.price,
+              category: newItem.category,
+              icon: newItem.icon
+            })
+            .then(({ error }) => { if (error) console.error("Error inserting menu item to cloud:", error); });
+        }
       } else {
         const index = parseInt(indexStr, 10);
+        const oldName = menu[index].name;
         menu[index] = newItem;
+
+        // Supabase mirror update
+        if (supabaseClient) {
+          supabaseClient.from('doppio_menu')
+            .update({
+              name: newItem.name,
+              description: newItem.description || '',
+              price: newItem.price,
+              category: newItem.category,
+              icon: newItem.icon
+            })
+            .eq('name', oldName)
+            .then(({ error }) => { if (error) console.error("Error updating menu item in cloud:", error); });
+        }
       }
 
       localStorage.setItem('doppio_menu', JSON.stringify(menu));
@@ -1188,4 +1534,103 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPOSCategories();
   renderPOSItems();
   renderCart();
+
+  // Initialize Supabase settings & triggers
+  initSupabase();
+
+  // Supabase Settings Config modal event wiring
+  const syncTrigger = document.getElementById('supabase-sync-trigger');
+  const supabaseModal = document.getElementById('supabase-modal');
+  const closeSupabaseModalBtn = document.getElementById('close-supabase-modal');
+  const supabaseConfigForm = document.getElementById('supabase-config-form');
+  const disconnectSupabaseBtn = document.getElementById('disconnect-supabase-btn');
+
+  if (syncTrigger && supabaseModal) {
+    syncTrigger.addEventListener('click', () => {
+      supabaseModal.classList.add('active');
+      initSupabase(); // refresh values
+    });
+  }
+
+  if (closeSupabaseModalBtn && supabaseModal) {
+    closeSupabaseModalBtn.addEventListener('click', () => {
+      supabaseModal.classList.remove('active');
+    });
+  }
+
+  // Close when clicking overlay backdrop
+  if (supabaseModal) {
+    supabaseModal.addEventListener('click', (e) => {
+      if (e.target === supabaseModal) {
+        supabaseModal.classList.remove('active');
+      }
+    });
+  }
+
+  if (supabaseConfigForm) {
+    supabaseConfigForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = document.getElementById('supabase-url-input').value.trim();
+      const key = document.getElementById('supabase-key-input').value.trim();
+      const saveBtn = document.getElementById('save-supabase-btn');
+
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting...';
+      }
+
+      // Test connection
+      try {
+        const testClient = supabase.createClient(url, key);
+        const { error } = await testClient.from('doppio_menu').select('name').limit(1);
+        
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        // Success! Save keys
+        localStorage.setItem('doppio_supabase_url', url);
+        localStorage.setItem('doppio_supabase_key', key);
+        
+        // Re-initialize client
+        initSupabase();
+        alert('Connected successfully! Database and real-time synchronization is now live.');
+        supabaseModal.classList.remove('active');
+      } catch (err) {
+        alert('Connection failed: ' + err.message + '\nPlease check your SQL scripts are run, RLS is allowed, or Anon keys are correct.');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<i class="fa-solid fa-plug"></i> Save & Connect';
+        }
+      }
+    });
+  }
+
+  if (disconnectSupabaseBtn) {
+    disconnectSupabaseBtn.addEventListener('click', () => {
+      if (confirm('Disconnect from Supabase live cloud database? POS will revert to offline-only localStorage mode.')) {
+        localStorage.removeItem('doppio_supabase_url');
+        localStorage.removeItem('doppio_supabase_key');
+        
+        // Reset local variables back to browser values
+        menu = JSON.parse(localStorage.getItem('doppio_menu')) || defaultMenu;
+        const savedInvLocal = JSON.parse(localStorage.getItem('doppio_inventory')) || {};
+        inventory = { ...defaultInventory, ...savedInvLocal };
+        bills = JSON.parse(localStorage.getItem('doppio_bills')) || [];
+
+        initSupabase();
+        
+        renderPOSCategories();
+        renderPOSItems();
+        if (document.getElementById('inventory-grid')) renderInventory();
+        if (document.getElementById('bills-table-body')) renderBills();
+        checkLowStockAlerts();
+        generateOrderNumber();
+        
+        if (supabaseModal) supabaseModal.classList.remove('active');
+        alert('Disconnected from cloud. Switched to secure offline operation.');
+      }
+    });
+  }
 });
