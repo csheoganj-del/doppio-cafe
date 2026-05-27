@@ -270,8 +270,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   let supabaseClient = null;
 
+  function sanitizeSupabaseUrl(url) {
+    if (!url) return '';
+    let clean = url.trim();
+    if (clean.endsWith('/')) {
+      clean = clean.slice(0, -1);
+    }
+    if (clean.endsWith('/rest/v1')) {
+      clean = clean.substring(0, clean.length - 8);
+    }
+    if (clean.endsWith('/')) {
+      clean = clean.slice(0, -1);
+    }
+    return clean;
+  }
+
   function initSupabase() {
-    const url = localStorage.getItem('doppio_supabase_url');
+    let url = localStorage.getItem('doppio_supabase_url');
+    url = sanitizeSupabaseUrl(url);
     const key = localStorage.getItem('doppio_supabase_key');
     const syncDot = document.getElementById('supabase-sync-dot');
     const syncText = document.getElementById('supabase-sync-text');
@@ -1570,7 +1586,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (supabaseConfigForm) {
     supabaseConfigForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const url = document.getElementById('supabase-url-input').value.trim();
+      let url = document.getElementById('supabase-url-input').value.trim();
+      url = sanitizeSupabaseUrl(url);
       const key = document.getElementById('supabase-key-input').value.trim();
       const saveBtn = document.getElementById('save-supabase-btn');
 
