@@ -2082,8 +2082,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function checkAdminPin() {
     if (!adminPinInput) return;
     if (adminPinInput.value === '1006') {
+      const callback = pinResolveCallback;
       closeAdminPinModal();
-      if (pinResolveCallback) pinResolveCallback();
+      if (callback) callback();
     } else {
       if (typeof SoundEffects !== 'undefined' && SoundEffects.playAlert) {
         SoundEffects.playAlert();
