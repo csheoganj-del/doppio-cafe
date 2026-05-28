@@ -4500,9 +4500,6 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
     }
   });
 
-  // ==========================================
-  // MOBILE DRAWER & MODAL BODY SCROLL LOCK SYSTEM
-  // ==========================================
   // Automatically toggles 'no-scroll' class on body when any drawer/modal is active
   const modalScrollLockObserver = new MutationObserver(() => {
     const isAnyOverlayActive = 
@@ -4511,11 +4508,25 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
       document.querySelector('.pos-cart-sidebar.active') ||
       document.querySelector('.menu-editor-form-panel.active');
     
+    // Temporarily disconnect the observer to avoid infinite loop when changing body class
+    modalScrollLockObserver.disconnect();
+    
     if (isAnyOverlayActive) {
-      document.body.classList.add('no-scroll');
+      if (!document.body.classList.contains('no-scroll')) {
+        document.body.classList.add('no-scroll');
+      }
     } else {
-      document.body.classList.remove('no-scroll');
+      if (document.body.classList.contains('no-scroll')) {
+        document.body.classList.remove('no-scroll');
+      }
     }
+    
+    // Re-observe class changes
+    modalScrollLockObserver.observe(document.body, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ['class']
+    });
   });
 
   // Watch class changes across the document tree
