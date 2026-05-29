@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doppio Cafe POS Terminal | Staff Login</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-brand: #2b1813;
+      --primary-brand-dark: #1b0d0a;
+      --accent-caramel: #C98A4A;
+      --bg-cream: #FDFBF7;
+      --text-dark: #2b1813;
+      --text-muted: #8e7a75;
+      --error-red: #e74c3c;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--primary-brand-dark) 0%, var(--primary-brand) 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: #FFF;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Ambient background glowing coffee beans simulation */
+    body::before {
+      content: "☕";
+      position: absolute;
+      font-size: 200px;
+      opacity: 0.03;
+      top: -50px;
+      left: -50px;
+    }
+    body::after {
+      content: "🥐";
+      position: absolute;
+      font-size: 150px;
+      opacity: 0.02;
+      bottom: -30px;
+      right: -30px;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      animation: fadeInUp 0.6s ease;
+    }
+
+    .login-card {
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 28px;
+      padding: 40px 30px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      text-align: center;
+    }
+
+    .brand-logo {
+      margin-bottom: 25px;
+    }
+
+    .logo-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 16px;
+      background: rgba(201, 138, 74, 0.1);
+      border: 1px solid rgba(201, 138, 74, 0.25);
+      border-radius: 50px;
+      margin-bottom: 12px;
+    }
+
+    .logo-icon {
+      font-size: 20px;
+      color: var(--accent-caramel);
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #FFF;
+    }
+
+    .logo-text span {
+      color: var(--accent-caramel);
+      font-weight: 400;
+      font-style: italic;
+    }
+
+    .login-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #FFF;
+      margin-bottom: 8px;
+    }
+
+    .login-subtitle {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 30px;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group {
+      position: relative;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-group i.input-icon {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 15px;
+      transition: var(--transition);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 16px 20px 16px 50px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      color: #FFF;
+      font-size: 14.5px;
+      outline: none;
+      transition: var(--transition);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .form-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .form-input:focus {
+      border-color: var(--accent-caramel);
+      background: rgba(0, 0, 0, 0.4);
+      box-shadow: 0 0 10px rgba(201, 138, 74, 0.25);
+    }
+
+    .form-input:focus + i.input-icon {
+      color: var(--accent-caramel);
+    }
+
+    /* Eye toggle icon */
+    .toggle-pwd {
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+      font-size: 15px;
+      transition: var(--transition);
+      z-index: 5;
+    }
+
+    .toggle-pwd:hover {
+      color: var(--accent-caramel);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent-caramel);
+      border: none;
+      border-radius: 14px;
+      color: #FFF;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: var(--transition);
+      box-shadow: 0 4px 15px rgba(201, 138, 74, 0.3);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .login-btn:hover {
+      background: #b57a3e;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(201, 138, 74, 0.4);
+    }
+
+    .login-btn:active {
+      transform: translateY(1px);
+    }
+
+    .error-box {
+      background: rgba(231, 76, 60, 0.1);
+      border: 1px solid rgba(231, 76, 60, 0.25);
+      border-radius: 12px;
+      padding: 12px;
+      color: #ff7675;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: none;
+      animation: shake 0.4s ease;
+      line-height: 1.4;
+    }
+
+    /* Animation classes */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    .shake-anim {
+      animation: shake 0.4s ease !important;
+    }
+
+    @keyframes lockBounce {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="login-card" id="login-card">
+      
+      <!-- Brand Logo -->
+      <div class="brand-logo">
+        <div class="logo-container">
+          <span class="logo-icon">☕</span>
+          <span class="logo-text">DOPPIO <span>Café</span></span>
+        </div>
+        <h2 class="login-title">POS Control Terminal</h2>
+        <p class="login-subtitle">Nagpur Cashier & Staff Access Only</p>
+      </div>
+
+      <!-- Error Box -->
+      <div class="error-box" id="error-box">
+        Access Denied: Invalid Username or Password.
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form">
+        <!-- Username input -->
+        <div class="form-group">
+          <input type="text" id="username" class="form-input" placeholder="Username" required autocomplete="username">
+          <i class="fa-solid fa-user input-icon"></i>
+        </div>
+
+        <!-- Password input -->
+        <div class="form-group">
+          <input type="password" id="password" class="form-input" placeholder="Password" required autocomplete="current-password">
+          <i class="fa-solid fa-lock input-icon"></i>
+          <i class="fa-solid fa-eye toggle-pwd" id="toggle-pwd"></i>
+        </div>
+
+        <!-- Submit button -->
+        <button type="submit" class="login-btn">
+          Log In Terminal <i class="fa-solid fa-right-to-bracket"></i>
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const loginForm = document.getElementById('login-form');
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const togglePwd = document.getElementById('toggle-pwd');
+      const errorBox = document.getElementById('error-box');
+      const loginCard = document.getElementById('login-card');
+
+      // Password visibility eye toggler
+      if (togglePwd && passwordInput) {
+        togglePwd.addEventListener('click', () => {
+          if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            togglePwd.classList.remove('fa-eye');
+            togglePwd.classList.add('fa-eye-slash');
+            togglePwd.style.color = 'var(--accent-caramel)';
+          } else {
+            passwordInput.type = 'password';
+            togglePwd.classList.remove('fa-eye-slash');
+            togglePwd.classList.add('fa-eye');
+            togglePwd.style.color = 'rgba(255, 255, 255, 0.4)';
+          }
+        });
+      }
+
+      // Handle login submit
+      if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const userVal = usernameInput.value.trim();
+          const pwdVal = passwordInput.value.trim();
+
+          if ((userVal === 'bonie' && pwdVal === 'diva123') || (userVal === 'staff' && pwdVal === 'staff123')) {
+            // Store credentials matching Web portal logic
+            sessionStorage.setItem('just_logged_in', 'true');
+            sessionStorage.setItem('logged_in_user', userVal);
+            
+            // Native vibration on success
+            if (window.AndroidInterface) {
+              window.AndroidInterface.vibrate(80);
+            }
+            
+            // Redirect straight to dashboard
+            window.location.href = 'dashboard.html';
+          } else {
+            // Visual shake & show error box
+            errorBox.style.display = 'block';
+            
+            // Hard Native vibration on failure
+            if (window.AndroidInterface) {
+              window.AndroidInterface.vibrate(300);
+            }
+
+            // CSS shake animation
+            loginCard.classList.remove('shake-anim');
+            void loginCard.offsetWidth; // trigger reflow
+            loginCard.classList.add('shake-anim');
+
+            // Reset password field
+            passwordInput.value = '';
+            passwordInput.focus();
+          }
+        });
+      }
+
+      // Hide error box on input change
+      [usernameInput, passwordInput].forEach(input => {
+        input.addEventListener('input', () => {
+          errorBox.style.display = 'none';
+        });
+      });
+    });
+  </script>
+</body>
+</html>
