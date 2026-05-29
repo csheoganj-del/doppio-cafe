@@ -1615,44 +1615,96 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    const border = "----------------------------------";
-    let msg = `☕ *DOPPIO CAFE NAGPUR* ☕\n`;
-    msg += `*Premium Coffee & Bakery POS*\n`;
-    msg += `${border}\n`;
-    msg += `*Order ID:* #${bill.orderId}\n`;
-    msg += `*Date:* ${bill.dateTime}\n`;
-    msg += `*Customer:* ${bill.customerName || 'Valued Guest'}\n`;
-    msg += `*Payment Method:* ${bill.paymentMethod || 'UPI'}\n`;
-    msg += `${border}\n`;
-    msg += `*ITEMS ORDERED:*\n`;
+    // Monospace alignment helpers (matching thermal printer 32-char specs)
+    function centerText32(text) {
+      const width = 32;
+      if (text.length >= width) return text.slice(0, width);
+      const leftPad = Math.floor((width - text.length) / 2);
+      return ' '.repeat(leftPad) + text;
+    }
+
+    function formatRow32(col1, col2, col3) {
+      const w1 = 20; // Item column width
+      const w2 = 5;  // Qty column width
+      const w3 = 7;  // Amt column width
+      
+      let c1 = col1.slice(0, w1 - 1);
+      c1 = c1.padEnd(w1, ' ');
+      
+      const c2 = col2.toString().padStart(w2, ' ');
+      const c3 = col3.toString().padStart(w3, ' ');
+      
+      return c1 + c2 + c3;
+    }
+
+    function formatDouble32(label, value) {
+      const totalWidth = 32;
+      const valStr = value.toString();
+      const padSize = totalWidth - label.length;
+      if (padSize < valStr.length) {
+        return label.slice(0, totalWidth - valStr.length) + valStr;
+      }
+      return label + valStr.padStart(padSize, ' ');
+    }
+
+    const borderDouble = '='.repeat(32);
+    const borderSingle = '-'.repeat(32);
+    
+    // Build receipt wrapped in WhatsApp's triple backticks monospace block
+    let msg = "```\n";
+    msg += borderDouble + '\n';
+    msg += centerText32(businessProfile.name || 'DOPPIO CAFE NAGPUR') + '\n';
+    msg += centerText32(businessProfile.address || 'London Street, Nagpur') + '\n';
+    msg += centerText32(businessProfile.phone || '+91 91300 03177') + '\n';
+    msg += borderDouble + '\n\n';
+    
+    const leftBill = `Bill: ${bill.orderId}`;
+    const rightPay = bill.paymentMethod || 'Cash';
+    msg += leftBill + rightPay.padStart(32 - leftBill.length, ' ') + '\n';
+    
+    // Extract raw date part for compactness
+    const dateOnly = bill.dateTime ? bill.dateTime.split(',')[0] : new Date().toLocaleDateString('en-IN');
+    msg += `Date: ${dateOnly}\n`;
+    msg += `Guest: ${(bill.customerName || 'Walk-in Guest').slice(0, 25)}\n\n`;
+    
+    msg += borderSingle + '\n';
+    msg += 'Item                Qty   Amt\n';
+    msg += borderSingle + '\n';
     
     bill.items.forEach(item => {
-      let itemName = item.name;
+      let displayName = item.name;
       if (item.size && item.size !== 'Small') {
-        itemName += ` (${item.size.charAt(0)})`;
+        displayName += ` (${item.size.charAt(0)})`;
       }
-      const qtyAmt = `${item.qty} x ₹${item.price} = ₹${item.price * item.qty}`;
-      msg += `• ${itemName}\n   _${qtyAmt}_\n`;
+      
+      msg += formatRow32(displayName, item.qty, (item.price * item.qty).toString()) + '\n';
+      
       if (item.toppings && item.toppings.length > 0) {
-        msg += `   + Toppings: _${item.toppings.join(', ')}_\n`;
+        msg += `  + ${item.toppings.join(', ')}\n`;
       }
       if (item.notes) {
-        msg += `   * Note: _${item.notes}_\n`;
+        msg += `  * Note: ${item.notes}\n`;
       }
     });
     
-    msg += `${border}\n`;
-    msg += `*Subtotal:* ₹${bill.subtotal}\n`;
+    msg += borderSingle + '\n';
+    msg += formatDouble32('Subtotal', bill.subtotal.toString()) + '\n';
+    
+    if (businessProfile.gstEnabled !== false) {
+      msg += formatDouble32('GST', bill.gst.toString()) + '\n';
+    }
+    
     if (bill.discount && bill.discount > 0) {
-      msg += `*Discount (Loyalty):* -₹${bill.discount}\n`;
+      msg += formatDouble32('Discount', `-${bill.discount}`) + '\n';
     }
-    if (bill.gst && bill.gst > 0) {
-      msg += `*GST (18%):* ₹${bill.gst}\n`;
-    }
-    msg += `*GRAND TOTAL: ₹${bill.total}*\n`;
-    msg += `${border}\n`;
-    msg += `Thank you for visiting! ❤️\n`;
-    msg += `Have a wonderful day! Visit again ☕`;
+    
+    msg += borderDouble + '\n';
+    msg += formatDouble32('GRAND TOTAL', bill.total.toString()) + '\n';
+    msg += borderDouble + '\n\n';
+    
+    msg += centerText32('Thank you for visiting!') + '\n';
+    msg += centerText32('Visit Again ☕') + '\n';
+    msg += "```";
     
     const encodedMsg = encodeURIComponent(msg);
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodedMsg}`;
