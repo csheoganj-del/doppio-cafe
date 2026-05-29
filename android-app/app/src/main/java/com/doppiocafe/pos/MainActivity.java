@@ -81,6 +81,8 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setDatabaseEnabled(true);
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
+        webSettings.setAllowUniversalAccessFromFileURLs(true);
+        webSettings.setAllowFileAccessFromFileURLs(true);
         
         // Cache management: Use cache when offline, load normal when online
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
