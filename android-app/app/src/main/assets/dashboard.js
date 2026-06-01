@@ -1431,6 +1431,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getDeductionSpecs(cartItem) {
+    if (!cartItem || !cartItem.name || typeof cartItem.name !== 'string') return {};
     const nameLower = cartItem.name.toLowerCase().trim();
     const recipe = customRecipes[nameLower] || excelRecipes[nameLower] || excelRecipes[nameLower.replace('thick shake', 'thickshake')];
     return recipe || {};
@@ -7043,10 +7044,14 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
       }
       if (Array.isArray(billItems)) {
         billItems.forEach(item => {
+          if (!item) return;
           const specs = getDeductionSpecs(item);
-          Object.keys(specs).forEach(ing => {
-            consumption[ing] = (consumption[ing] || 0) + (specs[ing] * item.qty);
-          });
+          if (specs) {
+            Object.keys(specs).forEach(ing => {
+              const qty = parseFloat(item.qty) || 1;
+              consumption[ing] = (consumption[ing] || 0) + ((parseFloat(specs[ing]) || 0) * qty);
+            });
+          }
         });
       }
     });
