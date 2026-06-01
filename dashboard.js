@@ -361,6 +361,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (businessProfile.shiftMaxDrawer === undefined) businessProfile.shiftMaxDrawer = 5000;
   if (businessProfile.shiftPosLock === undefined) businessProfile.shiftPosLock = true;
 
+  // ==========================================
+  // SHIFT MANAGEMENT STATE ENGINE (Declared at top of scope to prevent Temporal Dead Zone crashes during bootstrap)
+  // ==========================================
+  let activeShift = (() => { try { return JSON.parse(localStorage.getItem('doppio_current_shift')) || null; } catch(e) { return null; } })();
+  let shiftHistory = (() => { try { return JSON.parse(localStorage.getItem('doppio_shifts_local')) || []; } catch(e) { return []; } })();
+  let shiftEvents = (() => { try { return JSON.parse(localStorage.getItem('doppio_shift_events_local')) || []; } catch(e) { return []; } })();
+
   // Force default sound off for existing storage/users
   if (localStorage.getItem('doppio_sound_default_off_v2') !== 'true') {
     businessProfile.soundEnabled = false;
@@ -5807,12 +5814,7 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
     });
   }
 
-  // ==========================================
-  // SHIFT MANAGEMENT STATE ENGINE
-  // ==========================================
-  let activeShift = (() => { try { return JSON.parse(localStorage.getItem('doppio_current_shift')) || null; } catch(e) { return null; } })();
-  let shiftHistory = (() => { try { return JSON.parse(localStorage.getItem('doppio_shifts_local')) || []; } catch(e) { return []; } })();
-  let shiftEvents = (() => { try { return JSON.parse(localStorage.getItem('doppio_shift_events_local')) || []; } catch(e) { return []; } })();
+
 
   // Expose activeShift internationally for checkout tagging
   window.getActiveShiftId = function() {
