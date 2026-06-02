@@ -1947,114 +1947,141 @@ document.addEventListener('DOMContentLoaded', () => {
       phoneNum = prompt("Enter customer's 10-digit WhatsApp number:", "");
       if (!phoneNum) return; // user cancelled
     }
-
+    
     phoneNum = phoneNum.replace(/\D/g, '');
-
+    
     if (phoneNum.length === 10) {
       phoneNum = "91" + phoneNum;
     }
-
+    
     if (phoneNum.length < 10) {
       alert("Invalid phone number! Please enter a valid number.");
       return;
     }
-
-    // ── Device-agnostic receipt ──────────────────────────────────
-    // Uses short, self-contained lines so the receipt never breaks
-    // on small phone screens. Avoids space-padding columns and emojis
-    // inside monospace rows (both cause misalignment on mobile).
-    // Separator = 20 chars — fits all screen sizes reliably.
-    // ─────────────────────────────────────────────────────────────
-    const SEP  = '--------------------'; // 20-char single rule
-    const SEP2 = '===================='; // 20-char double rule
-    const NL   = '\n';
-
-    // Right-align value against label within 20 chars
-    function lv(label, value) {
-      const val = value.toString();
-      const gap = 20 - label.length - val.length;
-      if (gap <= 0) return label + ' ' + val;
-      return label + ' '.repeat(gap) + val;
+    
+    // Monospace alignment helpers (matching safe WhatsApp 28-char specs)
+    function centerText28(text) {
+      const width = 28;
+      if (text.length <= width) {
+        const leftPad = Math.floor((width - text.length) / 2);
+        return ' '.repeat(leftPad) + text;
+      }
+      
+      const words = text.split(' ');
+      const lines = [];
+      let currentLine = '';
+      
+      words.forEach(word => {
+        if ((currentLine + (currentLine ? ' ' : '') + word).length <= width) {
+          currentLine += (currentLine ? ' ' : '') + word;
+        } else {
+          if (currentLine) lines.push(currentLine);
+          currentLine = word;
+        }
+      });
+      if (currentLine) lines.push(currentLine);
+      
+      return lines.map(line => {
+        const leftPad = Math.floor((width - line.length) / 2);
+        return ' '.repeat(leftPad) + line;
+      }).join('\n');
     }
 
-    // Center text within 20 chars
-    function ctr(text) {
-      const w = 20;
-      if (text.length >= w) return text.slice(0, w);
-      const pad = Math.floor((w - text.length) / 2);
-      return ' '.repeat(pad) + text;
+    function formatRow28(col1, col2, col3) {
+      const w1 = 17; // Item column width
+      const w2 = 4;  // Qty column width
+      const w3 = 7;  // Amt column width
+      
+      let c1 = col1.slice(0, w1 - 1);
+      c1 = c1.padEnd(w1, ' ');
+      
+      const c2 = col2.toString().padStart(w2, ' ');
+      const c3 = col3.toString().padStart(w3, ' ');
+      
+      return c1 + c2 + c3;
     }
 
-    const shopName  = (businessProfile.name    || 'DOPPIO CAFE NAGPUR').toUpperCase();
-    const shopAddr  =  businessProfile.address || 'London Street, Nagpur';
-    const shopPhone =  businessProfile.phone   || '+91 91300 03177';
-    const dateOnly  = bill.dateTime ? bill.dateTime.split(',')[0] : new Date().toLocaleDateString('en-IN');
-    const timeOnly  = bill.dateTime && bill.dateTime.split(',')[1] ? bill.dateTime.split(',')[1].trim() : '';
-    const payMethod = bill.paymentMethod || 'Cash';
-    const custName  = (bill.customerName || 'Walk-in Guest').slice(0, 20);
+    function formatDouble28(label, value) {
+      const totalWidth = 28;
+      const valStr = value.toString();
+      const padSize = totalWidth - label.length;
+      if (padSize < valStr.length) {
+        return label.slice(0, totalWidth - valStr.length) + valStr;
+      }
+      return label + valStr.padStart(padSize, ' ');
+    }
 
-    let msg = '```' + NL;
-
-    // ── Header ──
-    msg += ctr(shopName)  + NL;
-    msg += ctr(shopAddr)  + NL;
-    msg += ctr(shopPhone) + NL;
-    msg += SEP2 + NL;
-
-    // ── Bill meta ──
-    msg += 'Bill  : ' + bill.orderId + NL;
-    msg += 'Date  : ' + dateOnly + NL;
-    if (timeOnly) msg += 'Time  : ' + timeOnly + NL;
-    msg += 'Guest : ' + custName + NL;
-    msg += 'Pay   : ' + payMethod + NL;
-    msg += SEP + NL;
-
-    // ── Items ──
-    // Each item gets its own labelled lines — no column padding needed
-    msg += 'ITEMS' + NL;
-    msg += SEP + NL;
-
+    const borderDouble = '='.repeat(28);
+    const borderSingle = '-'.repeat(28);
+    
+    // Build receipt wrapped in WhatsApp's triple backticks monospace block
+    let msg = "```\n";
+    msg += borderDouble + '\n';
+    msg += centerText28(businessProfile.name || 'DOPPIO CAFE NAGPUR') + '\n';
+    msg += centerText28(businessProfile.address || 'London Street, Nagpur') + '\n';
+    msg += centerText28(businessProfile.phone || '+91 91300 03177') + '\n';
+    msg += borderDouble + '\n\n';
+    
+    let leftBill = `Bill: ${bill.orderId}`;
+    let rightPay = bill.paymentMethod || 'Cash';
+    if (rightPay.length > 10) {
+      rightPay = rightPay.slice(0, 10);
+    }
+    const padSize = 28 - leftBill.length;
+    if (padSize < rightPay.length) {
+      msg += leftBill.slice(0, 28 - rightPay.length) + rightPay + '\n';
+    } else {
+      msg += leftBill + rightPay.padStart(padSize, ' ') + '\n';
+    }
+    
+    // Extract raw date part for compactness
+    const dateOnly = bill.dateTime ? bill.dateTime.split(',')[0] : new Date().toLocaleDateString('en-IN');
+    msg += `Date: ${dateOnly}\n`;
+    msg += `Guest: ${(bill.customerName || 'Walk-in Guest').slice(0, 21)}\n\n`;
+    
+    msg += borderSingle + '\n';
+    msg += formatRow28('Item', 'Qty', 'Amt') + '\n';
+    msg += borderSingle + '\n';
+    
     bill.items.forEach(item => {
-      const rawName   = (item.name || 'Item').slice(0, 20);
-      const sizeSfx   = (item.size && item.size !== 'Regular' && item.size !== 'Small')
-                        ? ' (' + item.size.charAt(0) + ')' : '';
-      const qty       = item.qty || 1;
-      const price     = item.price || 0;
-      const amt       = qty * price;
-
-      msg += rawName + sizeSfx + NL;
-      msg += '  ' + qty + ' x Rs.' + price + ' = Rs.' + amt + NL;
-
+      let displayName = item.name;
+      if (item.size && item.size !== 'Small') {
+        displayName += ` (${item.size.charAt(0)})`;
+      }
+      
+      msg += formatRow28(displayName, item.qty, (item.price * item.qty).toString()) + '\n';
+      msg += `  (₹${item.price} each)\n`;
+      
       if (item.toppings && item.toppings.length > 0) {
-        msg += '  +' + item.toppings.join(', ').slice(0, 17) + NL;
+        msg += `  + ${item.toppings.join(', ')}\n`;
       }
       if (item.notes) {
-        msg += '  *' + item.notes.slice(0, 17) + NL;
+        msg += `  * Note: ${item.notes}\n`;
       }
     });
-
-    // ── Totals ──
-    msg += SEP + NL;
-    msg += lv('Subtotal', 'Rs.' + bill.subtotal) + NL;
-    if (businessProfile.gstEnabled !== false && bill.gst > 0) {
-      msg += lv('GST (18%)', 'Rs.' + bill.gst) + NL;
+    
+    msg += borderSingle + '\n';
+    msg += formatDouble28('Subtotal', bill.subtotal.toString()) + '\n';
+    
+    if (businessProfile.gstEnabled !== false) {
+      msg += formatDouble28('GST', bill.gst.toString()) + '\n';
     }
+    
     if (bill.discount && bill.discount > 0) {
-      msg += lv('Discount', '-Rs.' + bill.discount) + NL;
+      msg += formatDouble28('Discount', `-${bill.discount}`) + '\n';
     }
-    msg += SEP2 + NL;
-    msg += lv('TOTAL', 'Rs.' + bill.total) + NL;
-    msg += SEP2 + NL;
-
-    // ── Closing note ──
-    msg += NL;
-    msg += ctr('Thank you!') + NL;
-    msg += ctr('Visit Again  :)') + NL;
-    msg += '```';
-
+    
+    msg += borderDouble + '\n';
+    msg += formatDouble28('GRAND TOTAL', bill.total.toString()) + '\n';
+    msg += borderDouble + '\n\n';
+    
+    msg += centerText28('Thank you for visiting!') + '\n';
+    msg += centerText28('Visit Again ☕') + '\n';
+    msg += "```";
+    
     const encodedMsg = encodeURIComponent(msg);
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodedMsg}`;
-
+    
     window.open(whatsappUrl, '_blank');
   }
 
