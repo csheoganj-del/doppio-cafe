@@ -625,6 +625,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { error } = await supabaseClient.from('doppio_bills').insert({
           orderId: bill.orderId,
           customerName: bill.customerName,
+          customerPhone: bill.customerPhone,
           dateTime: bill.dateTime,
           items: typeof bill.items === 'string' ? bill.items : JSON.stringify(bill.items),
           subtotal: bill.subtotal,
@@ -2084,6 +2085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         supabaseClient.from('doppio_bills').insert({
           orderId: newBill.orderId,
           customerName: newBill.customerName,
+          customerPhone: newBill.customerPhone,
           dateTime: newBill.dateTime,
           items: typeof newBill.items === 'string' ? newBill.items : JSON.stringify(newBill.items),
           subtotal: newBill.subtotal,
@@ -2925,7 +2927,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
       
-      fetch(businessProfile.whatsappGatewayUrl, {
+      let dispatchUrl = businessProfile.whatsappGatewayUrl.trim();
+      if (!dispatchUrl.endsWith('/send') && !dispatchUrl.endsWith('/api/mock-whatsapp') && !dispatchUrl.includes('httpbin.org')) {
+        if (dispatchUrl.endsWith('/')) {
+          dispatchUrl += 'send';
+        } else {
+          dispatchUrl += '/send';
+        }
+      }
+
+      fetch(dispatchUrl, {
         method: "POST",
         headers: headers,
         body: JSON.stringify(payload)
@@ -4932,8 +4943,112 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
   const cancelProfileBtn = document.getElementById('cancel-profile-btn');
   const businessProfileForm = document.getElementById('business-profile-form');
 
+  let waPollingInterval = null;
+
+  function pollWhatsAppGatewayStatus() {
+    const waGatewayEnabledEl = document.getElementById('profile-wa-gateway-enabled');
+    const waGatewayUrlEl = document.getElementById('profile-wa-gateway-url');
+    const statusBadge = document.getElementById('wa-status-badge');
+    const qrContainer = document.getElementById('wa-qr-container');
+    const qrImg = document.getElementById('wa-qr-img');
+    const qrSpinner = document.getElementById('wa-qr-spinner');
+    const connectedContainer = document.getElementById('wa-connected-container');
+    const connectedNumber = document.getElementById('wa-connected-number');
+
+    if (!waGatewayEnabledEl || !waGatewayEnabledEl.checked) {
+      if (qrContainer) qrContainer.style.display = 'none';
+      if (connectedContainer) connectedContainer.style.display = 'none';
+      if (statusBadge) {
+        statusBadge.textContent = 'DISABLED';
+        statusBadge.style.background = '#e0e0e0';
+        statusBadge.style.color = '#666';
+      }
+      return;
+    }
+
+    let url = waGatewayUrlEl ? waGatewayUrlEl.value.trim() : 'http://localhost:3000';
+    if (!url) url = 'http://localhost:3000';
+    if (url.endsWith('/')) url = url.slice(0, -1);
+
+    fetch(`${url}/status`)
+      .then(res => res.json())
+      .then(data => {
+        if (statusBadge) {
+          statusBadge.textContent = data.status.toUpperCase();
+          if (data.status === 'ready') {
+            statusBadge.style.background = '#d4edda';
+            statusBadge.style.color = '#155724';
+          } else if (data.status === 'qr') {
+            statusBadge.style.background = '#fff3cd';
+            statusBadge.style.color = '#856404';
+          } else {
+            statusBadge.style.background = '#f8d7da';
+            statusBadge.style.color = '#721c24';
+          }
+        }
+
+        if (data.status === 'ready') {
+          if (qrContainer) qrContainer.style.display = 'none';
+          if (connectedContainer) connectedContainer.style.display = 'flex';
+          if (connectedNumber) connectedNumber.textContent = `+${data.number}`;
+        } else if (data.status === 'qr') {
+          if (connectedContainer) connectedContainer.style.display = 'none';
+          if (qrContainer) qrContainer.style.display = 'flex';
+          if (data.qr) {
+            if (qrSpinner) qrSpinner.style.display = 'none';
+            if (qrImg) {
+              qrImg.src = data.qr;
+              qrImg.style.display = 'block';
+            }
+          } else {
+            if (qrSpinner) qrSpinner.style.display = 'block';
+            if (qrImg) qrImg.style.display = 'none';
+          }
+        } else {
+          if (connectedContainer) connectedContainer.style.display = 'none';
+          if (qrContainer) qrContainer.style.display = 'flex';
+          if (qrSpinner) {
+            qrSpinner.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="margin-bottom: 6px; font-size: 16px; color: #128c7e;"></i><br>Connecting to WhatsApp... (Status: ${data.status.toUpperCase()})`;
+            qrSpinner.style.display = 'block';
+          }
+          if (qrImg) qrImg.style.display = 'none';
+        }
+      })
+      .catch(err => {
+        console.warn('WhatsApp gateway offline:', err.message);
+        if (statusBadge) {
+          statusBadge.textContent = 'OFFLINE';
+          statusBadge.style.background = '#f8d7da';
+          statusBadge.style.color = '#721c24';
+        }
+        if (connectedContainer) connectedContainer.style.display = 'none';
+        if (qrContainer) qrContainer.style.display = 'flex';
+        if (qrSpinner) {
+          qrSpinner.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="margin-bottom: 6px; font-size: 16px; color: #d32f2f;"></i><br>Gateway Server Offline<br><span style="font-size: 8px; color: #666; margin-top: 4px; display: block;">Start local gateway server</span>`;
+          qrSpinner.style.display = 'block';
+        }
+        if (qrImg) qrImg.style.display = 'none';
+      });
+  }
+
+  function startWhatsAppPolling() {
+    if (waPollingInterval) clearInterval(waPollingInterval);
+    pollWhatsAppGatewayStatus();
+    waPollingInterval = setInterval(pollWhatsAppGatewayStatus, 3000);
+  }
+
+  function stopWhatsAppPolling() {
+    if (waPollingInterval) {
+      clearInterval(waPollingInterval);
+      waPollingInterval = null;
+    }
+  }
+
   function openProfileModal() {
     if (!profileModal) return;
+    
+    // Start polling gateway connection status
+    startWhatsAppPolling();
     
     document.getElementById('profile-name-input').value = businessProfile.name;
     document.getElementById('profile-address-input').value = businessProfile.address;
@@ -4983,8 +5098,67 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
   }
 
   if (openProfileBtn) openProfileBtn.addEventListener('click', openProfileModal);
-  if (closeProfileModal) closeProfileModal.addEventListener('click', () => profileModal.classList.remove('active'));
-  if (cancelProfileBtn) cancelProfileBtn.addEventListener('click', () => profileModal.classList.remove('active'));
+  
+  if (closeProfileModal) {
+    closeProfileModal.addEventListener('click', () => {
+      profileModal.classList.remove('active');
+      stopWhatsAppPolling();
+    });
+  }
+  
+  if (cancelProfileBtn) {
+    cancelProfileBtn.addEventListener('click', () => {
+      profileModal.classList.remove('active');
+      stopWhatsAppPolling();
+    });
+  }
+
+  // Settings UI element change listeners to instantly update polling state
+  const waGatewayEnabledEl = document.getElementById('profile-wa-gateway-enabled');
+  if (waGatewayEnabledEl) {
+    waGatewayEnabledEl.addEventListener('change', () => {
+      pollWhatsAppGatewayStatus();
+    });
+  }
+
+  const waGatewayUrlEl = document.getElementById('profile-wa-gateway-url');
+  if (waGatewayUrlEl) {
+    waGatewayUrlEl.addEventListener('change', () => {
+      pollWhatsAppGatewayStatus();
+    });
+  }
+
+  // WhatsApp Device Unlinking (Logout) Button
+  const waLogoutBtn = document.getElementById('wa-logout-btn');
+  if (waLogoutBtn) {
+    waLogoutBtn.addEventListener('click', () => {
+      if (!confirm('Are you sure you want to unlink the current WhatsApp account?')) return;
+      
+      SoundEffects.playClick();
+      let url = waGatewayUrlEl ? waGatewayUrlEl.value.trim() : 'http://localhost:3000';
+      if (!url) url = 'http://localhost:3000';
+      if (url.endsWith('/')) url = url.slice(0, -1);
+
+      const statusBadge = document.getElementById('wa-status-badge');
+      if (statusBadge) {
+        statusBadge.textContent = 'UNLINKING...';
+        statusBadge.style.background = '#fff3cd';
+        statusBadge.style.color = '#856404';
+      }
+
+      fetch(`${url}/logout`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          console.log('WhatsApp account unlinked successfully:', data);
+          pollWhatsAppGatewayStatus();
+        })
+        .catch(err => {
+          console.error('Failed to unlink WhatsApp account:', err);
+          alert('Failed to log out: ' + err.message);
+          pollWhatsAppGatewayStatus();
+        });
+    });
+  }
 
   // Multi tab toggle buttons inside profile Settings
   const settingsTabBtns = document.querySelectorAll('.settings-tab-btn');
@@ -5274,6 +5448,7 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
       }
 
       profileModal.classList.remove('active');
+      stopWhatsAppPolling();
       alert('Business Settings sync saved successfully!');
       renderCart();
     });
@@ -7965,6 +8140,7 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
       supabaseClient.from('doppio_bills').insert({
         orderId: approvedBill.orderId,
         customerName: approvedBill.customerName,
+        customerPhone: approvedBill.customerPhone,
         dateTime: approvedBill.dateTime,
         items: JSON.stringify(approvedBill.items),
         subtotal: approvedBill.subtotal,

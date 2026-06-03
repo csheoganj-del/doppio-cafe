@@ -4,7 +4,111 @@
  * Keeps existing brown-cream branding, Supabase sync, and synthesiser chimes.
  */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+  // ==========================================
+  // TRIPLE-VAULT RESILIENCE VAULT (IndexedDB)
+  // ==========================================
+  let dbInstance = null;
+  function initIndexedDBVault() {
+    return new Promise((resolve) => {
+      const request = indexedDB.open("DoppioVaultDB", 1);
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains("stateStore")) {
+          db.createObjectStore("stateStore");
+        }
+      };
+      request.onsuccess = (e) => {
+        dbInstance = e.target.result;
+        console.log("[Resilience Vault] IndexedDB Vault initialized successfully!");
+        resolve(dbInstance);
+      };
+      request.onerror = (e) => {
+        console.error("[Resilience Vault] IndexedDB failed:", e.target.error);
+        resolve(null);
+      };
+    });
+  }
+
+  function setVaultData(key, value) {
+    if (!dbInstance) return;
+    try {
+      const transaction = dbInstance.transaction(["stateStore"], "readwrite");
+      const store = transaction.objectStore("stateStore");
+      store.put(JSON.stringify(value), key);
+    } catch (e) {
+      console.warn("[Resilience Vault] Write failed for key " + key, e);
+    }
+  }
+
+  function getVaultData(key) {
+    return new Promise((resolve) => {
+      if (!dbInstance) return resolve(null);
+      try {
+        const transaction = dbInstance.transaction(["stateStore"], "readonly");
+        const store = transaction.objectStore("stateStore");
+        const request = store.get(key);
+        request.onsuccess = (e) => {
+          try {
+            resolve(e.target.result ? JSON.parse(e.target.result) : null);
+          } catch(err) {
+            resolve(e.target.result);
+          }
+        };
+        request.onerror = () => resolve(null);
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  }
+
+  // Initialize DB and recover if LocalStorage is cleared!
+  await initIndexedDBVault();
+  
+  if (localStorage.length === 0 || !localStorage.getItem('doppio_bills')) {
+    console.log("[Resilience Vault] LocalStorage empty or bills missing! Attempting IndexedDB vault restoration...");
+    try {
+      const restoredBills = await getVaultData("doppio_bills");
+      const restoredMenu = await getVaultData("doppio_menu");
+      const restoredInv = await getVaultData("doppio_inventory");
+      const restoredProfile = await getVaultData("doppio_business_profile");
+      const restoredShift = await getVaultData("doppio_current_shift");
+      const restoredShiftsLocal = await getVaultData("doppio_shifts_local");
+      const restoredShiftEventsLocal = await getVaultData("doppio_shift_events_local");
+
+      if (restoredBills) localStorage.setItem('doppio_bills', JSON.stringify(restoredBills));
+      if (restoredMenu) localStorage.setItem('doppio_menu', JSON.stringify(restoredMenu));
+      if (restoredInv) localStorage.setItem('doppio_inventory', JSON.stringify(restoredInv));
+      if (restoredProfile) localStorage.setItem('doppio_business_profile', JSON.stringify(restoredProfile));
+      if (restoredShift) localStorage.setItem('doppio_current_shift', JSON.stringify(restoredShift));
+      if (restoredShiftsLocal) localStorage.setItem('doppio_shifts_local', JSON.stringify(restoredShiftsLocal));
+      if (restoredShiftEventsLocal) localStorage.setItem('doppio_shift_events_local', JSON.stringify(restoredShiftEventsLocal));
+      
+      if (restoredBills || restoredInv) {
+        console.log("[Resilience Vault] Successfully recovered POS state from IndexedDB vault!");
+      }
+    } catch(err) {
+      console.error("[Resilience Vault] Recovery error:", err);
+    }
+  }
+
+  // Monkey-patch localStorage.setItem to redundantly write to IndexedDB!
+  const originalSetItem = localStorage.setItem;
+  localStorage.setItem = function(key, value) {
+    try {
+      originalSetItem.apply(this, arguments);
+      if (key.startsWith('doppio_')) {
+        try {
+          setVaultData(key, JSON.parse(value));
+        } catch(e) {
+          setVaultData(key, value);
+        }
+      }
+    } catch(err) {
+      console.warn("[Resilience Vault] LocalStorage write bypassed to backup only:", err);
+    }
+  };
 
   // Premium Low-overhead Global Exception Logger for Nagpur Branch POS Diagnostics
   window.onerror = function (msg, url, lineNo, columnNo, error) {
@@ -521,6 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { error } = await supabaseClient.from('doppio_bills').insert({
           orderId: bill.orderId,
           customerName: bill.customerName,
+          customerPhone: bill.customerPhone,
           dateTime: bill.dateTime,
           items: typeof bill.items === 'string' ? bill.items : JSON.stringify(bill.items),
           subtotal: bill.subtotal,
@@ -550,6 +655,48 @@ document.addEventListener('DOMContentLoaded', () => {
   async function syncWithSupabase() {
     if (!supabaseClient) return;
     try {
+      // Sync Business Profile Toggles and Settings Live!
+      try {
+        const { data: dbProfileList } = await supabaseClient.from('doppio_business_profile').select('*').eq('id', 1);
+        if (dbProfileList && dbProfileList.length > 0) {
+          const dbProfile = dbProfileList[0];
+          businessProfile = {
+            name: dbProfile.business_name || businessProfile.name,
+            address: dbProfile.address || businessProfile.address,
+            phone: dbProfile.phone || businessProfile.phone,
+            gstEnabled: dbProfile.gst_enabled !== undefined ? dbProfile.gst_enabled : businessProfile.gstEnabled,
+            gstRate: dbProfile.gst_rate !== undefined ? parseFloat(dbProfile.gst_rate) : businessProfile.gstRate,
+            loyaltyEnabled: dbProfile.loyalty_discount_enabled !== undefined ? dbProfile.loyalty_discount_enabled : businessProfile.loyaltyEnabled,
+            loyaltyRate: dbProfile.loyalty_discount_rate !== undefined ? parseFloat(dbProfile.loyalty_discount_rate) : businessProfile.loyaltyRate,
+            passcodeLockEnabled: dbProfile.passcode_lock_enabled !== undefined ? dbProfile.passcode_lock_enabled : businessProfile.passcodeLockEnabled,
+            crmEnabled: dbProfile.crm_enabled !== undefined ? dbProfile.crm_enabled : businessProfile.crmEnabled,
+            taxEnabled: dbProfile.tax_enabled !== undefined ? dbProfile.tax_enabled : businessProfile.taxEnabled,
+            soundEnabled: dbProfile.sound_enabled !== undefined ? dbProfile.sound_enabled : businessProfile.soundEnabled,
+            whatsappEnabled: dbProfile.whatsapp_enabled !== undefined ? dbProfile.whatsapp_enabled : businessProfile.whatsappEnabled,
+            shiftEnabled: dbProfile.shift_enabled !== undefined ? dbProfile.shift_enabled : businessProfile.shiftEnabled,
+            shiftDefaultFloat: dbProfile.shift_default_float !== undefined ? parseFloat(dbProfile.shift_default_float) : businessProfile.shiftDefaultFloat,
+            shiftMaxDrawer: dbProfile.shift_max_drawer !== undefined ? parseFloat(dbProfile.shift_max_drawer) : businessProfile.shiftMaxDrawer,
+            shiftPosLock: dbProfile.shift_pos_lock !== undefined ? dbProfile.shift_pos_lock : businessProfile.shiftPosLock,
+            whatsappGatewayEnabled: dbProfile.whatsapp_gateway_enabled !== undefined ? dbProfile.whatsapp_gateway_enabled : businessProfile.whatsappGatewayEnabled,
+            whatsappGatewayUrl: dbProfile.whatsapp_gateway_url || businessProfile.whatsappGatewayUrl,
+            whatsappGatewayToken: dbProfile.whatsapp_gateway_token || businessProfile.whatsappGatewayToken
+          };
+          
+          if (businessProfile.whatsappGatewayUrl === undefined || !businessProfile.whatsappGatewayUrl || businessProfile.whatsappGatewayUrl.trim() === '' || businessProfile.whatsappGatewayUrl.trim() === 'https://httpbin.org/post') {
+            businessProfile.whatsappGatewayUrl = 'http://localhost:8001/api/mock-whatsapp';
+          }
+          if (businessProfile.whatsappGatewayEnabled === undefined || businessProfile.whatsappGatewayEnabled === false) {
+            businessProfile.whatsappGatewayEnabled = true;
+          }
+          
+          localStorage.setItem('doppio_business_profile', JSON.stringify(businessProfile));
+          applyFeatureToggles();
+          renderCart();
+        }
+      } catch (err) {
+        console.warn("Supabase business profile sync failed (probably table/columns missing):", err);
+      }
+
       // Sync Menu
       const { data: dbMenu } = await supabaseClient.from('doppio_menu').select('*').order('id', { ascending: true });
       if (dbMenu && dbMenu.length > 0) {
@@ -621,6 +768,50 @@ document.addEventListener('DOMContentLoaded', () => {
         renderBills();
         updateHeaderSummaryStats();
       }
+
+      // Sync Pending QR Orders (Made by Antigravity)
+      try {
+        const { data: dbPending } = await supabaseClient.from('doppio_pending_orders').select('*');
+        if (dbPending && dbPending.length > 0) {
+          const parsedPending = dbPending.map(o => {
+            let items = o.items;
+            if (typeof items === 'string') {
+              try { items = JSON.parse(items); } catch(e) { items = []; }
+            }
+            return {
+              orderId: o.orderId,
+              customerName: o.customerName,
+              customerPhone: o.customerPhone,
+              dateTime: o.dateTime,
+              items: items,
+              subtotal: parseFloat(o.subtotal || 0),
+              discount: parseFloat(o.discount || 0),
+              gst: parseFloat(o.gst || 0),
+              total: parseFloat(o.total || 0),
+              paymentMethod: o.paymentMethod,
+              orderType: o.orderType,
+              tableNumber: o.tableNumber,
+              status: o.status
+            };
+          });
+
+          // Merge defensively with local cache
+          const localMap = new Map(pendingQrOrders.map(o => [o.orderId, o]));
+          parsedPending.forEach(p => {
+            localMap.set(p.orderId, p);
+            if (p.tableNumber && p.tableNumber !== 'Takeaway') {
+              tablesState[p.tableNumber] = "PENDING";
+            }
+          });
+          pendingQrOrders = Array.from(localMap.values());
+          localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+          localStorage.setItem('doppio_tables_state', JSON.stringify(tablesState));
+          updateQrOrdersDashboardUI();
+        }
+      } catch (err) {
+        console.warn("Supabase pending orders sync failed:", err);
+      }
+
     } catch(e) {
       console.warn("Supabase initial sync fallback", e);
     }
@@ -628,9 +819,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setupSupabaseRealtime() {
     if (!supabaseClient) return;
+    
+    // Subscribe to standard bills changes
     supabaseClient.channel('doppio-bills-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'doppio_bills' }, () => {
         syncWithSupabase();
+      }).subscribe();
+
+    // Subscribe to live QR self-ordering queue (Made by Antigravity)
+    supabaseClient.channel('doppio-pending-orders-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'doppio_pending_orders' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newOrder = payload.new;
+          let items = newOrder.items;
+          if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch(e) { items = []; }
+          }
+          const orderObj = {
+            orderId: newOrder.orderId,
+            customerName: newOrder.customerName,
+            customerPhone: newOrder.customerPhone,
+            dateTime: newOrder.dateTime,
+            items: items,
+            subtotal: parseFloat(newOrder.subtotal || 0),
+            discount: parseFloat(newOrder.discount || 0),
+            gst: parseFloat(newOrder.gst || 0),
+            total: parseFloat(newOrder.total || 0),
+            paymentMethod: newOrder.paymentMethod,
+            orderType: newOrder.orderType,
+            tableNumber: newOrder.tableNumber,
+            status: newOrder.status
+          };
+          
+          if (!pendingQrOrders.some(o => o.orderId === orderObj.orderId)) {
+            pendingQrOrders.push(orderObj);
+            localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+            
+            if (orderObj.tableNumber && orderObj.tableNumber !== 'Takeaway') {
+              tablesState[orderObj.tableNumber] = "PENDING";
+              localStorage.setItem('doppio_tables_state', JSON.stringify(tablesState));
+            }
+            
+            playIncomingOrderChime();
+            showNotificationToast(`New self-service order from Table ${orderObj.tableNumber}!`);
+            updateQrOrdersDashboardUI();
+          }
+        } else if (payload.eventType === 'DELETE') {
+          // Sync deletes across multiple dashboard clients
+          const deletedOrderId = payload.old.orderId || payload.old.order_id;
+          if (deletedOrderId) {
+            pendingQrOrders = pendingQrOrders.filter(o => o.orderId !== deletedOrderId);
+            localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+            updateQrOrdersDashboardUI();
+          }
+        }
       }).subscribe();
 
     // Subscribe to WhatsApp Broadcast delivery status messages (Made by Antigravity)
@@ -692,6 +934,10 @@ document.addEventListener('DOMContentLoaded', () => {
       tabTitle.textContent = link.textContent.trim();
       
       if (tabId === 'pos-tab') tabSubtitle.textContent = 'Default Tab: Selection Grid';
+      else if (tabId === 'qr-orders-tab') {
+        tabSubtitle.textContent = 'Dine-in self-service active';
+        updateQrOrdersDashboardUI();
+      }
       else if (tabId === 'bills-tab') {
         tabSubtitle.textContent = 'Print, Refund, or Edit Invoices';
         renderBills();
@@ -715,6 +961,18 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (tabId === 'tax-tab') {
         tabSubtitle.textContent = 'Central & State Tax Ledger Filing Hub';
         renderTaxTab();
+      }
+      else if (tabId === 'online-tab') {
+        tabSubtitle.textContent = 'Online Delivery Channel Integration Center';
+        renderOnlineOrdersTab();
+      }
+      else if (tabId === 'kds-tab') {
+        tabSubtitle.textContent = 'Kitchen Cooking Live Preparation Board';
+        if (typeof renderKDSTab === 'function') renderKDSTab();
+      }
+      else if (tabId === 'tokens-tab') {
+        tabSubtitle.textContent = 'Live Takeaway & Delivery Pickup Screen';
+        if (typeof renderTokensTab === 'function') renderTokensTab();
       }
     });
   });
@@ -1205,7 +1463,404 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('doppio_cart_cust_phone', phoneInput ? phoneInput.value : '');
 
     renderPOSItems();
+    updateAISuggestions();
     if (window.triggerCartBump) window.triggerCartBump();
+  }
+
+  // ==========================================
+  // AI SMART UPSELL COMPANION ENGINE
+  // ==========================================
+  const aiUpsellBox = document.getElementById('ai-upsell-box');
+  const aiUpsellText = document.getElementById('ai-upsell-text');
+  const aiUpsellAddBtn = document.getElementById('ai-upsell-add-btn');
+  let currentSuggestedItem = null;
+
+  function updateAISuggestions() {
+    if (!aiUpsellBox || !aiUpsellText) return;
+
+    if (cart.length === 0) {
+      aiUpsellBox.style.display = 'none';
+      currentSuggestedItem = null;
+      return;
+    }
+
+    const cartNames = new Set(cart.map(i => i.name.toLowerCase().trim()));
+    let suggestionText = '';
+    let itemToSuggest = null;
+
+    if ((cartNames.has('iced latte') || cartNames.has('cappuccino') || cartNames.has('americano')) && !cartNames.has('fries peri peri')) {
+      suggestionText = "💡 AI Smart Combo: Add Fries Peri Peri with your coffee for 15% combo discount!";
+      itemToSuggest = menu.find(i => i.name.toLowerCase() === 'fries peri peri');
+    }
+    else if (cartNames.has('nutella thickshake') && !cartNames.has('bombay grilled sandwich')) {
+      suggestionText = "💡 AI Upsell: Pair your Thickshake with a Bombay Grilled Sandwich for a perfect high-margin meal!";
+      itemToSuggest = menu.find(i => i.name.toLowerCase() === 'bombay grilled sandwich');
+    }
+    else if (!cartNames.has('iced latte')) {
+      suggestionText = "💡 AI Recommends: Add our Nagpur Premium bestseller Iced Latte to your cart!";
+      itemToSuggest = menu.find(i => i.name.toLowerCase() === 'iced latte');
+    }
+
+    if (itemToSuggest) {
+      aiUpsellText.textContent = suggestionText;
+      aiUpsellBox.style.display = 'flex';
+      currentSuggestedItem = itemToSuggest;
+    } else {
+      aiUpsellBox.style.display = 'none';
+      currentSuggestedItem = null;
+    }
+  }
+
+  if (aiUpsellAddBtn) {
+    aiUpsellAddBtn.addEventListener('click', () => {
+      if (currentSuggestedItem) {
+        SoundEffects.playSuccess();
+        
+        const cartKey = `${currentSuggestedItem.name.toLowerCase().trim()}-regular-regular-regular-none`;
+        const existing = cart.find(i => i.key === cartKey);
+        
+        if (existing) {
+          existing.qty += 1;
+        } else {
+          cart.push({
+            key: cartKey,
+            name: currentSuggestedItem.name,
+            price: currentSuggestedItem.price,
+            qty: 1,
+            size: 'Regular',
+            sugar: 'Regular',
+            ice: 'Regular',
+            toppings: [],
+            icon: currentSuggestedItem.icon || '✨'
+          });
+        }
+        
+        showNotificationToast(`Added AI Recommended ${currentSuggestedItem.name}!`);
+        renderCart();
+      }
+    });
+  }
+
+  // ==========================================
+  // ONLINE INTEGRATIONS: MOCK AGGREGATOR MODULE
+  // ==========================================
+  const onlineOrdersQueue = document.getElementById('online-orders-queue');
+  const onlineOrdersBadge = document.getElementById('online-orders-badge');
+  const onlineOrdersSummaryLabel = document.getElementById('online-orders-summary-label');
+  const onlineAutoAcceptCheck = document.getElementById('online-auto-accept');
+  const toggleZomatoCheck = document.getElementById('toggle-zomato');
+  const toggleSwiggyCheck = document.getElementById('toggle-swiggy');
+  const toggleDunzoCheck = document.getElementById('toggle-dunzo');
+  
+  const btnSimulateZomato = document.getElementById('btn-simulate-zomato');
+  const btnSimulateSwiggy = document.getElementById('btn-simulate-swiggy');
+
+  if (onlineAutoAcceptCheck) {
+    onlineAutoAcceptCheck.checked = localStorage.getItem('doppio_online_auto_accept') === 'true';
+    onlineAutoAcceptCheck.addEventListener('change', (e) => {
+      localStorage.setItem('doppio_online_auto_accept', e.target.checked);
+    });
+  }
+
+  function renderOnlineOrdersTab() {
+    if (!onlineOrdersQueue) return;
+    onlineOrdersQueue.innerHTML = '';
+
+    const pendingOnline = pendingQrOrders.filter(o => (o.orderType === 'ZOMATO' || o.orderType === 'SWIGGY') && o.status === 'Pending Review');
+    
+    if (onlineOrdersBadge) {
+      if (pendingOnline.length > 0) {
+        onlineOrdersBadge.textContent = pendingOnline.length;
+        onlineOrdersBadge.style.display = 'inline-block';
+      } else {
+        onlineOrdersBadge.style.display = 'none';
+      }
+    }
+
+    if (onlineOrdersSummaryLabel) {
+      onlineOrdersSummaryLabel.textContent = `${pendingOnline.length} Online Orders Pending Review`;
+    }
+
+    if (pendingOnline.length === 0) {
+      onlineOrdersQueue.innerHTML = `
+        <div class="premium-empty-state" style="grid-column: 1 / -1; padding: 60px 20px; text-align: center; width:100%; box-sizing: border-box;">
+          <i class="fa-solid fa-cloud-sun" style="font-size: 36px; color: var(--accent-caramel); opacity: 0.5; margin-bottom: 16px;"></i>
+          <h3 style="margin-bottom: 8px; color: var(--primary-brand);">Aggregator Stream is Quiet</h3>
+          <p style="font-size: 11px; color: var(--text-muted); max-width: 300px; margin: 0 auto; line-height: 1.4;">Active orders from Zomato and Swiggy channels will stream in here dynamically with ring chimes.</p>
+        </div>
+      `;
+      return;
+    }
+
+    pendingOnline.forEach(order => {
+      const card = document.createElement('div');
+      card.className = 'qr-order-queue-card';
+      const themeColor = order.orderType === 'ZOMATO' ? '#e23744' : '#fc8019';
+      card.style.borderLeft = `4px solid ${themeColor}`;
+      
+      const itemsListStr = order.items.map(item => `
+        <div class="qr-card-item-row">
+          <span>${item.name} x${item.qty}</span>
+          <span style="font-weight:700;">₹${item.price * item.qty}</span>
+        </div>
+      `).join('');
+
+      card.innerHTML = `
+        <div class="qr-card-header">
+          <span class="qr-card-table-lbl" style="color:${themeColor}; font-weight:800;">
+            <i class="fa-solid fa-cloud" style="margin-right:4px;"></i> ${order.orderType} Channel
+          </span>
+          <span class="qr-card-paymethod-badge upi" style="background:${themeColor}; color:white;">Prepaid Online</span>
+        </div>
+        
+        <div class="qr-card-cust-info">
+          <span style="font-weight: 700; color: var(--primary-brand);"><i class="fa-solid fa-user" style="font-size:10px; width:12px; margin-right:4px;"></i> ${order.customerName}</span>
+          <span style="font-size:11px; color: var(--text-muted);"><i class="fa-solid fa-clock" style="font-size:10px; width:12px; margin-right:4px;"></i> ${order.dateTime}</span>
+        </div>
+
+        <div class="qr-card-items-box">
+          ${itemsListStr}
+        </div>
+
+        <div class="qr-card-total-box">
+          <span>Payout (UPI Sync)</span>
+          <span class="qr-card-total-val" style="color:${themeColor};">₹${order.total}</span>
+        </div>
+
+        <div class="qr-card-actions">
+          <button class="qr-action-btn reject" data-id="${order.orderId}"><i class="fa-solid fa-xmark"></i> Decline</button>
+          <button class="qr-action-btn approve" data-id="${order.orderId}" style="background:${themeColor};"><i class="fa-solid fa-check"></i> Accept (KDS)</button>
+        </div>
+      `;
+
+      onlineOrdersQueue.appendChild(card);
+    });
+
+    onlineOrdersQueue.querySelectorAll('.qr-action-btn.approve').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const orderId = btn.getAttribute('data-id');
+        approveOnlineOrder(orderId);
+      });
+    });
+
+    onlineOrdersQueue.querySelectorAll('.qr-action-btn.reject').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const orderId = btn.getAttribute('data-id');
+        rejectOnlineOrder(orderId);
+      });
+    });
+  }
+
+  const originalUpdateQrUI = updateQrOrdersDashboardUI;
+  updateQrOrdersDashboardUI = function() {
+    if (originalUpdateQrUI) originalUpdateQrUI();
+    renderOnlineOrdersTab();
+    if (typeof renderKDSTab === 'function') renderKDSTab();
+    if (typeof renderTokensTab === 'function') renderTokensTab();
+  };
+
+  async function approveOnlineOrder(orderId) {
+    const order = pendingQrOrders.find(o => o.orderId === orderId);
+    if (!order) return;
+
+    let sufficientStock = true;
+    let missingIngredient = '';
+    const proposedDeductions = {};
+
+    order.items.forEach(cartItem => {
+      const specs = getDeductionSpecs(cartItem);
+      Object.keys(specs).forEach(ing => {
+        proposedDeductions[ing] = (proposedDeductions[ing] || 0) + (specs[ing] * cartItem.qty);
+      });
+    });
+
+    Object.keys(proposedDeductions).forEach(ing => {
+      if (inventory[ing] === undefined) inventory[ing] = 1000;
+      if (inventory[ing] < proposedDeductions[ing]) {
+        sufficientStock = false;
+        missingIngredient = ing.replace('_', ' ');
+      }
+    });
+
+    if (!sufficientStock) {
+      alert(`Approval Failed! Insufficient stock of: ${missingIngredient}. Please restock.`);
+      return;
+    }
+
+    Object.keys(proposedDeductions).forEach(ing => {
+      inventory[ing] -= proposedDeductions[ing];
+      if (supabaseClient) {
+        supabaseClient.from('doppio_inventory')
+          .update({ current: inventory[ing] })
+          .eq('key', ing).then();
+      }
+    });
+    localStorage.setItem('doppio_inventory', JSON.stringify(inventory));
+
+    const approvedBill = {
+      orderId: order.orderId,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      dateTime: new Date().toLocaleString('en-IN'),
+      items: order.items,
+      subtotal: order.subtotal,
+      discount: order.discount || 0,
+      gst: order.gst || 0,
+      total: order.total,
+      paymentMethod: order.paymentMethod,
+      orderType: order.orderType
+    };
+
+    bills.push(approvedBill);
+    localStorage.setItem('doppio_bills', JSON.stringify(bills));
+    renderBills();
+    updateHeaderSummaryStats();
+
+    SoundEffects.playSuccess();
+    showNotificationToast(`${order.orderType} order ${order.orderId} accepted successfully!`);
+
+    if (supabaseClient && navigator.onLine) {
+      supabaseClient.from('doppio_bills').insert({
+        orderId: approvedBill.orderId,
+        customerName: approvedBill.customerName,
+        customerPhone: approvedBill.customerPhone,
+        items: JSON.stringify(approvedBill.items),
+        subtotal: approvedBill.subtotal,
+        gst: approvedBill.gst,
+        total: approvedBill.total,
+        paymentMethod: approvedBill.paymentMethod,
+        dateTime: approvedBill.dateTime
+      }).then();
+    }
+
+    order.status = 'Accepted';
+    localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+    
+    if (supabaseClient) {
+      supabaseClient.from('doppio_pending_orders')
+        .update({ status: 'Accepted' })
+        .eq('orderId', orderId).then();
+    }
+
+    updateQrOrdersDashboardUI();
+    if (typeof renderKDSTab === 'function') renderKDSTab();
+  }
+
+  function rejectOnlineOrder(orderId) {
+    SoundEffects.playRemove();
+    pendingQrOrders = pendingQrOrders.filter(o => o.orderId !== orderId);
+    localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+    
+    if (supabaseClient) {
+      supabaseClient.from('doppio_pending_orders')
+        .delete()
+        .eq('orderId', orderId).then();
+    }
+    
+    updateQrOrdersDashboardUI();
+    showNotificationToast(`Online order ${orderId} declined.`);
+  }
+
+  async function simulateOnlineOrder(aggregator) {
+    if (aggregator === 'ZOMATO' && toggleZomatoCheck && !toggleZomatoCheck.checked) {
+      alert("Zomato Integration is currently toggled OFF in channel settings!");
+      return;
+    }
+    if (aggregator === 'SWIGGY' && toggleSwiggyCheck && !toggleSwiggyCheck.checked) {
+      alert("Swiggy Integration is currently toggled OFF in channel settings!");
+      return;
+    }
+
+    SoundEffects.playPop();
+    const isAutoAccept = onlineAutoAcceptCheck ? onlineAutoAcceptCheck.checked : false;
+
+    const orderNum = Math.floor(1000 + Math.random() * 9000);
+    const orderId = `${aggregator.slice(0, 3)}-${orderNum}`;
+    
+    const randomNames = ["Kalpesh Deora", "Rohan Sharma", "Sneha Patel", "Anjali Deshmukh", "Piyush Joshi"];
+    const name = randomNames[Math.floor(Math.random() * randomNames.length)];
+    const phone = `913000${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const selectedItems = [];
+    const count = Math.random() > 0.5 ? 2 : 1;
+    for (let i = 0; i < count; i++) {
+      const randomItem = menu[Math.floor(Math.random() * menu.length)];
+      if (randomItem && !selectedItems.some(item => item.name === randomItem.name)) {
+        selectedItems.push({
+          name: randomItem.name,
+          price: randomItem.price,
+          qty: 1,
+          size: 'Regular',
+          sugar: 'Regular',
+          ice: 'Regular',
+          toppings: [],
+          icon: randomItem.icon || '☕'
+        });
+      }
+    }
+
+    const subtotal = selectedItems.reduce((sum, i) => sum + (i.price * i.qty), 0);
+    const gst = Math.round(subtotal * 0.18);
+    const total = subtotal + gst;
+
+    const mockOrder = {
+      orderId: orderId,
+      customerName: name,
+      customerPhone: phone.slice(-10),
+      dateTime: new Date().toLocaleString('en-IN'),
+      items: selectedItems,
+      subtotal: subtotal,
+      discount: 0,
+      gst: gst,
+      total: total,
+      paymentMethod: 'UPI (Aggregator)',
+      orderType: aggregator,
+      tableNumber: 'ONLINE',
+      status: isAutoAccept ? 'Accepted' : 'Pending Review'
+    };
+
+    pendingQrOrders.push(mockOrder);
+    localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('doppio_pending_orders').insert({
+          orderId: mockOrder.orderId,
+          customerName: mockOrder.customerName,
+          customerPhone: mockOrder.customerPhone,
+          items: JSON.stringify(mockOrder.items),
+          subtotal: mockOrder.subtotal,
+          discount: mockOrder.discount,
+          gst: mockOrder.gst,
+          total: mockOrder.total,
+          paymentMethod: mockOrder.paymentMethod,
+          orderType: mockOrder.orderType,
+          tableNumber: mockOrder.tableNumber,
+          status: mockOrder.status,
+          dateTime: mockOrder.dateTime
+        });
+      } catch (err) {
+        console.warn("Failed syncing mock order to Supabase:", err);
+      }
+    }
+
+    playIncomingOrderChime();
+    showNotificationToast(`New Incoming ${aggregator} delivery order: ${orderId} (₹${total})`);
+
+    if (isAutoAccept) {
+      setTimeout(() => {
+        approveOnlineOrder(orderId);
+      }, 1000);
+    } else {
+      updateQrOrdersDashboardUI();
+    }
+  }
+
+  if (btnSimulateZomato) {
+    btnSimulateZomato.addEventListener('click', () => simulateOnlineOrder('ZOMATO'));
+  }
+  if (btnSimulateSwiggy) {
+    btnSimulateSwiggy.addEventListener('click', () => simulateOnlineOrder('SWIGGY'));
   }
 
   if (cartList) {
@@ -1430,6 +2085,7 @@ document.addEventListener('DOMContentLoaded', () => {
         supabaseClient.from('doppio_bills').insert({
           orderId: newBill.orderId,
           customerName: newBill.customerName,
+          customerPhone: newBill.customerPhone,
           dateTime: newBill.dateTime,
           items: typeof newBill.items === 'string' ? newBill.items : JSON.stringify(newBill.items),
           subtotal: newBill.subtotal,
@@ -1877,6 +2533,80 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function getFallbackCategoryIcon(term) {
+    const t = String(term).toLowerCase();
+    if (t.includes('sandwich') || t.includes('panini')) return '🥪';
+    if (t.includes('fries') || t.includes('peri')) return '🍟';
+    if (t.includes('shake') || t.includes('frappe') || t.includes('thickshake')) return '🥤';
+    if (t.includes('latte') || t.includes('matcha') || t.includes('milk')) return '🥛';
+    if (t.includes('croissant') || t.includes('pastry') || t.includes('bakery')) return '🥐';
+    return '☕';
+  }
+
+  function getRandomGoodVibeQuote(bill) {
+    let orderId = '';
+    let hasFood = false;
+    let hasDrinks = false;
+
+    if (typeof bill === 'string') {
+      orderId = bill;
+    } else if (bill && typeof bill === 'object') {
+      orderId = bill.orderId || '';
+      if (bill.items) {
+        bill.items.forEach(item => {
+          const name = String(item.name || '').toLowerCase();
+          const cat = String(item.category || '').toLowerCase();
+          if (name.includes('sandwich') || name.includes('fries') || name.includes('panini') || name.includes('burger') || name.includes('snack') || name.includes('munch') || cat.includes('food') || cat.includes('snack') || cat.includes('snacks')) {
+            hasFood = true;
+          }
+          if (name.includes('coffee') || name.includes('latte') || name.includes('matcha') || name.includes('frappe') || name.includes('shake') || name.includes('tea') || cat.includes('beverage') || cat.includes('coffee') || cat.includes('drinks')) {
+            hasDrinks = true;
+          }
+        });
+      }
+    }
+
+    let quotes = [];
+    if (hasFood && !hasDrinks) {
+      // Food Heavy Sensible Quotes
+      quotes = [
+        "🍔 Made fresh to make you smile! ✨",
+        "🍟 Hot, crispy & made with love!",
+        "🥪 Your perfect bite is here! ✨",
+        "✨ Hot snacks, warm smiles! 🥪",
+        "🔥 Delicious food, great mood!"
+      ];
+    } else if (hasDrinks && !hasFood) {
+      // Drink Heavy Sensible Quotes
+      quotes = [
+        "✨ Brewing happiness for you! ☕",
+        "☕ Good coffee, great day ahead!",
+        "💖 Espresso yourself and smile! ☕",
+        "✨ Freshly roasted joy in a cup! ☕",
+        "☕ Sip back, relax & enjoy!"
+      ];
+    } else {
+      // Generic / Mixed Sensible Quotes
+      quotes = [
+        "✨ Today is a beautiful day! 🌟",
+        "🍀 Thank you for being awesome! 💖",
+        "✨ Spread kindness like confetti! 🎉",
+        "💖 You made our day brighter! ✨",
+        "🍪 You're the cookie to our cup! ☕"
+      ];
+    }
+
+    let hash = 0;
+    if (orderId) {
+      for (let i = 0; i < orderId.length; i++) {
+        hash += orderId.charCodeAt(i);
+      }
+    } else {
+      hash = Math.floor(Math.random() * quotes.length);
+    }
+    return quotes[hash % quotes.length];
+  }
+
   // ==========================================
   // 8. THERMAL RECEIPT EMULATION ENGINE
   // ==========================================
@@ -1937,7 +2667,8 @@ document.addEventListener('DOMContentLoaded', () => {
     txt += borderSingle + '\n';
     
     bill.items.forEach(item => {
-      let displayName = item.name;
+      const itemIcon = item.icon || getFallbackCategoryIcon(item.category || item.name);
+      let displayName = `${itemIcon} ${item.name}`;
       if (item.size && item.size !== 'Small') {
         displayName += ` (${item.size.charAt(0)})`;
       }
@@ -1968,6 +2699,11 @@ document.addEventListener('DOMContentLoaded', () => {
     txt += borderDouble + '\n';
     txt += formatDouble32('GRAND TOTAL', bill.total.toString()) + '\n';
     txt += borderDouble + '\n\n';
+
+    const vibeQuote = getRandomGoodVibeQuote(bill);
+    txt += borderSingle + '\n';
+    txt += centerText32(vibeQuote) + '\n';
+    txt += borderSingle + '\n\n';
     
     txt += centerText32('Thank you for visiting!') + '\n';
     txt += centerText32('Visit Again ☕') + '\n';
@@ -2087,7 +2823,8 @@ document.addEventListener('DOMContentLoaded', () => {
     msg += borderSingle + '\n';
     
     bill.items.forEach(item => {
-      let displayName = item.name;
+      const itemIcon = item.icon || getFallbackCategoryIcon(item.category || item.name);
+      let displayName = `${itemIcon} ${item.name}`;
       if (item.size && item.size !== 'Small') {
         displayName += ` (${item.size.charAt(0)})`;
       }
@@ -2117,6 +2854,11 @@ document.addEventListener('DOMContentLoaded', () => {
     msg += borderDouble + '\n';
     msg += formatDouble24('GRAND TOTAL', bill.total.toString()) + '\n';
     msg += borderDouble + '\n\n';
+
+    const vibeQuote = getRandomGoodVibeQuote(bill);
+    msg += borderSingle + '\n';
+    msg += centerText24(vibeQuote) + '\n';
+    msg += borderSingle + '\n\n';
     
     msg += centerText24('Thank you for visiting!') + '\n';
     msg += centerText24('Visit Again ☕') + '\n';
@@ -2185,7 +2927,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
-      fetch(businessProfile.whatsappGatewayUrl, {
+      let dispatchUrl = businessProfile.whatsappGatewayUrl.trim();
+      if (!dispatchUrl.endsWith('/send') && !dispatchUrl.endsWith('/api/mock-whatsapp') && !dispatchUrl.includes('httpbin.org')) {
+        if (dispatchUrl.endsWith('/')) {
+          dispatchUrl += 'send';
+        } else {
+          dispatchUrl += '/send';
+        }
+      }
+
+      fetch(dispatchUrl, {
         method: "POST",
         headers: headers,
         body: JSON.stringify(payload)
@@ -2582,6 +3333,73 @@ document.addEventListener('DOMContentLoaded', () => {
           ledgerList.appendChild(item);
         });
       }
+    }
+
+    // Dynamic Online Order Reconciliation Chart (Step 8)
+    const reconBox = document.getElementById('reconciliation-chart-box');
+    if (reconBox) {
+      reconBox.innerHTML = '';
+      
+      let directGross = 0;
+      let zomatoGross = 0;
+      let swiggyGross = 0;
+      
+      filteredBills.forEach(b => {
+        const type = b.orderType || 'Takeaway';
+        if (type === 'ZOMATO') {
+          zomatoGross += b.total || 0;
+        } else if (type === 'SWIGGY') {
+          swiggyGross += b.total || 0;
+        } else {
+          directGross += b.total || 0;
+        }
+      });
+      
+      const onlineGross = zomatoGross + swiggyGross;
+      const commissionLoss = Math.round(onlineGross * 0.22);
+      const onlinePayout = onlineGross - commissionLoss;
+      
+      const maxSales = Math.max(directGross, onlineGross, 100);
+      
+      const directPct = Math.min(100, Math.round((directGross / maxSales) * 100));
+      const onlinePct = Math.min(100, Math.round((onlineGross / maxSales) * 100));
+      
+      reconBox.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 14px; padding: 10px 0;">
+          <!-- Direct Sales Bar -->
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+              <span><i class="fa-solid fa-store" style="color:var(--success-color);"></i> Direct Store Sales (100% Retained)</span>
+              <strong>₹${directGross.toFixed(2)}</strong>
+            </div>
+            <div style="width: 100%; height: 8px; background: rgba(43,24,19,0.05); border-radius: 4px; overflow: hidden;">
+              <div style="width: ${directPct}%; height: 100%; background: var(--success-color); border-radius: 4px; transition: width 0.5s ease;"></div>
+            </div>
+          </div>
+          
+          <!-- Online Gross Bar -->
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+              <span><i class="fa-solid fa-cloud" style="color:var(--accent-caramel);"></i> Online Aggregator Gross (Zomato/Swiggy)</span>
+              <strong>₹${onlineGross.toFixed(2)}</strong>
+            </div>
+            <div style="width: 100%; height: 8px; background: rgba(43,24,19,0.05); border-radius: 4px; overflow: hidden;">
+              <div style="width: ${onlinePct}%; height: 100%; background: var(--accent-caramel); border-radius: 4px; transition: width 0.5s ease;"></div>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 4px; padding: 12px; background: rgba(200, 138, 88, 0.04); border-radius: 12px; border: 1px dashed rgba(200,138,88,0.15); font-family: var(--font-body);">
+            <div>
+              <div style="font-size: 9px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;">Lost to Commissions (22%)</div>
+              <div style="font-size: 14px; font-weight: 800; color: var(--danger-color);">₹${commissionLoss.toFixed(2)}</div>
+            </div>
+            <div>
+              <div style="font-size: 9px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;">Reconciled Payout (78%)</div>
+              <div style="font-size: 14px; font-weight: 800; color: var(--success-color);">₹${onlinePayout.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+      `;
     }
   }
 
@@ -3881,6 +4699,45 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
     });
   }
 
+  // GSTR-1 Pre-Filing Accountant Exporter
+  const btnExportGstr1 = document.getElementById('btn-export-gstr1');
+  if (btnExportGstr1) {
+    btnExportGstr1.addEventListener('click', () => {
+      SoundEffects.playClick();
+      const activePeriodBills = getActivePeriodBills();
+      if (activePeriodBills.length === 0) {
+        alert("No invoices found in the selected date range to export GSTR!");
+        return;
+      }
+      
+      let csvContent = "Invoice Number,Invoice Date,Customer Name,Customer GSTIN,Place of Supply,Taxable Value,CGST (Rate 9%),SGST (Rate 9%),IGST,Total Invoice Value\n";
+      
+      activePeriodBills.forEach(b => {
+        const invNo = b.orderId;
+        const invDate = b.dateTime ? b.dateTime.split(',')[0] : '';
+        const custName = b.customerName || 'Walk-in Guest';
+        const totalVal = b.total || 0;
+        const gstVal = b.gst || 0;
+        const taxableVal = totalVal - gstVal;
+        
+        const cgst = (gstVal / 2).toFixed(2);
+        const sgst = (gstVal / 2).toFixed(2);
+        const igst = (0).toFixed(2);
+        
+        csvContent += `"${invNo}","${invDate}","${custName.replace(/"/g, '""')}","","Local (State)",${taxableVal.toFixed(2)},${cgst},${sgst},${igst},${totalVal.toFixed(2)}\n`;
+      });
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gstr1_report_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      
+      showNotificationToast(`GSTR-1 report containing ${activePeriodBills.length} invoices exported!`);
+    });
+  }
+
   // Backup file import listeners
   if (importTaxTriggerBtn && importTaxFileInput) {
     importTaxTriggerBtn.addEventListener('click', () => {
@@ -4086,8 +4943,112 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
   const cancelProfileBtn = document.getElementById('cancel-profile-btn');
   const businessProfileForm = document.getElementById('business-profile-form');
 
+  let waPollingInterval = null;
+
+  function pollWhatsAppGatewayStatus() {
+    const waGatewayEnabledEl = document.getElementById('profile-wa-gateway-enabled');
+    const waGatewayUrlEl = document.getElementById('profile-wa-gateway-url');
+    const statusBadge = document.getElementById('wa-status-badge');
+    const qrContainer = document.getElementById('wa-qr-container');
+    const qrImg = document.getElementById('wa-qr-img');
+    const qrSpinner = document.getElementById('wa-qr-spinner');
+    const connectedContainer = document.getElementById('wa-connected-container');
+    const connectedNumber = document.getElementById('wa-connected-number');
+
+    if (!waGatewayEnabledEl || !waGatewayEnabledEl.checked) {
+      if (qrContainer) qrContainer.style.display = 'none';
+      if (connectedContainer) connectedContainer.style.display = 'none';
+      if (statusBadge) {
+        statusBadge.textContent = 'DISABLED';
+        statusBadge.style.background = '#e0e0e0';
+        statusBadge.style.color = '#666';
+      }
+      return;
+    }
+
+    let url = waGatewayUrlEl ? waGatewayUrlEl.value.trim() : 'http://localhost:3000';
+    if (!url) url = 'http://localhost:3000';
+    if (url.endsWith('/')) url = url.slice(0, -1);
+
+    fetch(`${url}/status`)
+      .then(res => res.json())
+      .then(data => {
+        if (statusBadge) {
+          statusBadge.textContent = data.status.toUpperCase();
+          if (data.status === 'ready') {
+            statusBadge.style.background = '#d4edda';
+            statusBadge.style.color = '#155724';
+          } else if (data.status === 'qr') {
+            statusBadge.style.background = '#fff3cd';
+            statusBadge.style.color = '#856404';
+          } else {
+            statusBadge.style.background = '#f8d7da';
+            statusBadge.style.color = '#721c24';
+          }
+        }
+
+        if (data.status === 'ready') {
+          if (qrContainer) qrContainer.style.display = 'none';
+          if (connectedContainer) connectedContainer.style.display = 'flex';
+          if (connectedNumber) connectedNumber.textContent = `+${data.number}`;
+        } else if (data.status === 'qr') {
+          if (connectedContainer) connectedContainer.style.display = 'none';
+          if (qrContainer) qrContainer.style.display = 'flex';
+          if (data.qr) {
+            if (qrSpinner) qrSpinner.style.display = 'none';
+            if (qrImg) {
+              qrImg.src = data.qr;
+              qrImg.style.display = 'block';
+            }
+          } else {
+            if (qrSpinner) qrSpinner.style.display = 'block';
+            if (qrImg) qrImg.style.display = 'none';
+          }
+        } else {
+          if (connectedContainer) connectedContainer.style.display = 'none';
+          if (qrContainer) qrContainer.style.display = 'flex';
+          if (qrSpinner) {
+            qrSpinner.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="margin-bottom: 6px; font-size: 16px; color: #128c7e;"></i><br>Connecting to WhatsApp... (Status: ${data.status.toUpperCase()})`;
+            qrSpinner.style.display = 'block';
+          }
+          if (qrImg) qrImg.style.display = 'none';
+        }
+      })
+      .catch(err => {
+        console.warn('WhatsApp gateway offline:', err.message);
+        if (statusBadge) {
+          statusBadge.textContent = 'OFFLINE';
+          statusBadge.style.background = '#f8d7da';
+          statusBadge.style.color = '#721c24';
+        }
+        if (connectedContainer) connectedContainer.style.display = 'none';
+        if (qrContainer) qrContainer.style.display = 'flex';
+        if (qrSpinner) {
+          qrSpinner.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="margin-bottom: 6px; font-size: 16px; color: #d32f2f;"></i><br>Gateway Server Offline<br><span style="font-size: 8px; color: #666; margin-top: 4px; display: block;">Start local gateway server</span>`;
+          qrSpinner.style.display = 'block';
+        }
+        if (qrImg) qrImg.style.display = 'none';
+      });
+  }
+
+  function startWhatsAppPolling() {
+    if (waPollingInterval) clearInterval(waPollingInterval);
+    pollWhatsAppGatewayStatus();
+    waPollingInterval = setInterval(pollWhatsAppGatewayStatus, 3000);
+  }
+
+  function stopWhatsAppPolling() {
+    if (waPollingInterval) {
+      clearInterval(waPollingInterval);
+      waPollingInterval = null;
+    }
+  }
+
   function openProfileModal() {
     if (!profileModal) return;
+    
+    // Start polling gateway connection status
+    startWhatsAppPolling();
     
     document.getElementById('profile-name-input').value = businessProfile.name;
     document.getElementById('profile-address-input').value = businessProfile.address;
@@ -4137,8 +5098,67 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
   }
 
   if (openProfileBtn) openProfileBtn.addEventListener('click', openProfileModal);
-  if (closeProfileModal) closeProfileModal.addEventListener('click', () => profileModal.classList.remove('active'));
-  if (cancelProfileBtn) cancelProfileBtn.addEventListener('click', () => profileModal.classList.remove('active'));
+  
+  if (closeProfileModal) {
+    closeProfileModal.addEventListener('click', () => {
+      profileModal.classList.remove('active');
+      stopWhatsAppPolling();
+    });
+  }
+  
+  if (cancelProfileBtn) {
+    cancelProfileBtn.addEventListener('click', () => {
+      profileModal.classList.remove('active');
+      stopWhatsAppPolling();
+    });
+  }
+
+  // Settings UI element change listeners to instantly update polling state
+  const waGatewayEnabledEl = document.getElementById('profile-wa-gateway-enabled');
+  if (waGatewayEnabledEl) {
+    waGatewayEnabledEl.addEventListener('change', () => {
+      pollWhatsAppGatewayStatus();
+    });
+  }
+
+  const waGatewayUrlEl = document.getElementById('profile-wa-gateway-url');
+  if (waGatewayUrlEl) {
+    waGatewayUrlEl.addEventListener('change', () => {
+      pollWhatsAppGatewayStatus();
+    });
+  }
+
+  // WhatsApp Device Unlinking (Logout) Button
+  const waLogoutBtn = document.getElementById('wa-logout-btn');
+  if (waLogoutBtn) {
+    waLogoutBtn.addEventListener('click', () => {
+      if (!confirm('Are you sure you want to unlink the current WhatsApp account?')) return;
+      
+      SoundEffects.playClick();
+      let url = waGatewayUrlEl ? waGatewayUrlEl.value.trim() : 'http://localhost:3000';
+      if (!url) url = 'http://localhost:3000';
+      if (url.endsWith('/')) url = url.slice(0, -1);
+
+      const statusBadge = document.getElementById('wa-status-badge');
+      if (statusBadge) {
+        statusBadge.textContent = 'UNLINKING...';
+        statusBadge.style.background = '#fff3cd';
+        statusBadge.style.color = '#856404';
+      }
+
+      fetch(`${url}/logout`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          console.log('WhatsApp account unlinked successfully:', data);
+          pollWhatsAppGatewayStatus();
+        })
+        .catch(err => {
+          console.error('Failed to unlink WhatsApp account:', err);
+          alert('Failed to log out: ' + err.message);
+          pollWhatsAppGatewayStatus();
+        });
+    });
+  }
 
   // Multi tab toggle buttons inside profile Settings
   const settingsTabBtns = document.querySelectorAll('.settings-tab-btn');
@@ -4184,6 +5204,97 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
   if (profileGstRate) profileGstRate.addEventListener('input', updateReceiptSimulator);
   if (profileLoyaltyCheck) profileLoyaltyCheck.addEventListener('change', updateReceiptSimulator);
   if (profileLoyaltyRate) profileLoyaltyRate.addEventListener('input', updateReceiptSimulator);
+
+  // Data Resilience Backup & Restore Hub Event Listeners
+  const btnExportBackup = document.getElementById('btn-export-backup');
+  const restoreBackupFileInput = document.getElementById('restore-backup-file');
+
+  if (btnExportBackup) {
+    btnExportBackup.addEventListener('click', () => {
+      SoundEffects.playClick();
+      const backupPayload = {
+        bills: JSON.parse(localStorage.getItem('doppio_bills')) || [],
+        inventory: JSON.parse(localStorage.getItem('doppio_inventory')) || {},
+        menu: JSON.parse(localStorage.getItem('doppio_menu')) || [],
+        businessProfile: JSON.parse(localStorage.getItem('doppio_business_profile')) || {},
+        activeShift: JSON.parse(localStorage.getItem('doppio_current_shift')) || null,
+        shiftHistory: JSON.parse(localStorage.getItem('doppio_shifts_local')) || [],
+        shiftEvents: JSON.parse(localStorage.getItem('doppio_shift_events_local')) || [],
+        timestamp: new Date().toISOString(),
+        branch: "Nagpur Premium Hub"
+      };
+
+      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `doppio-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showNotificationToast("Local JSON Backup exported successfully!");
+    });
+  }
+
+  if (restoreBackupFileInput) {
+    restoreBackupFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      SoundEffects.playPop();
+      if (!confirm("Are you sure you want to restore POS from this backup? This will overwrite your current active bills, inventory, shifts, and settings!")) {
+        restoreBackupFileInput.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        try {
+          const data = JSON.parse(evt.target.result);
+          if (data.bills && data.inventory && data.menu) {
+            localStorage.setItem('doppio_bills', JSON.stringify(data.bills));
+            localStorage.setItem('doppio_inventory', JSON.stringify(data.inventory));
+            localStorage.setItem('doppio_menu', JSON.stringify(data.menu));
+            if (data.businessProfile) localStorage.setItem('doppio_business_profile', JSON.stringify(data.businessProfile));
+            if (data.activeShift) localStorage.setItem('doppio_current_shift', JSON.stringify(data.activeShift));
+            if (data.shiftHistory) localStorage.setItem('doppio_shifts_local', JSON.stringify(data.shiftHistory));
+            if (data.shiftEvents) localStorage.setItem('doppio_shift_events_local', JSON.stringify(data.shiftEvents));
+
+            // Write redundantly to IndexedDB
+            setVaultData('doppio_bills', data.bills);
+            setVaultData('doppio_inventory', data.inventory);
+            setVaultData('doppio_menu', data.menu);
+            if (data.businessProfile) setVaultData('doppio_business_profile', data.businessProfile);
+
+            // Sync to Supabase
+            if (supabaseClient) {
+              const formattedSupabase = data.bills.map(b => ({
+                orderId: b.orderId,
+                customerName: b.customerName,
+                customerPhone: b.customerPhone,
+                items: typeof b.items === 'string' ? b.items : JSON.stringify(b.items),
+                subtotal: b.subtotal,
+                gst: b.gst || 0,
+                total: b.total,
+                paymentMethod: b.paymentMethod,
+                dateTime: b.dateTime
+              }));
+              await supabaseClient.from('doppio_bills').upsert(formattedSupabase, { onConflict: 'orderId' });
+            }
+
+            SoundEffects.playSuccess();
+            alert("🎉 Backup Restored Successfully! All sales, inventory, shifts, and menu items recovered.");
+            location.reload();
+          } else {
+            alert("Invalid backup file format! Missing core POS tables.");
+          }
+        } catch(err) {
+          console.error("Backup restoration failed:", err);
+          alert("Restore failed! File is corrupted or not valid JSON.");
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
 
   function updateReceiptSimulator() {
     const simName = document.getElementById('receipt-preview-store-name');
@@ -4279,9 +5390,9 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
 
       applyFeatureToggles();
 
-      // Reload cloud tables upserts
+      // Reload cloud tables upserts defensively
       if (supabaseClient) {
-        supabaseClient.from('doppio_business_profile').upsert({
+        const fullPayload = {
           id: 1,
           business_name: name,
           address,
@@ -4293,6 +5404,8 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
           passcode_lock_enabled: passcodeLockEnabled,
           crm_enabled: crmEnabled,
           tax_enabled: taxEnabled,
+          sound_enabled: soundEnabled,
+          whatsapp_enabled: whatsappEnabled,
           shift_enabled: shiftEnabled,
           shift_default_float: shiftDefaultFloat,
           shift_max_drawer: shiftMaxDrawer,
@@ -4300,10 +5413,42 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
           whatsapp_gateway_enabled: whatsappGatewayEnabled,
           whatsapp_gateway_url: whatsappGatewayUrl,
           whatsapp_gateway_token: whatsappGatewayToken
-        }, { onConflict: 'id' }).then();
+        };
+
+        const basicPayload = {
+          id: 1,
+          business_name: name,
+          address,
+          phone,
+          gst_enabled: gstEnabled,
+          gst_rate: gstRate,
+          loyalty_discount_enabled: loyaltyEnabled,
+          loyalty_discount_rate: loyaltyRate
+        };
+
+        supabaseClient.from('doppio_business_profile').upsert(fullPayload, { onConflict: 'id' })
+          .then(({ error }) => {
+            if (error) {
+              console.warn("Full settings sync failed (likely missing database columns), trying basic sync fallback:", error);
+              supabaseClient.from('doppio_business_profile').upsert(basicPayload, { onConflict: 'id' })
+                .then(({ error: basicError }) => {
+                  if (basicError) {
+                    console.error("Supabase basic settings sync failed:", basicError);
+                  } else {
+                    console.log("Supabase basic settings synced successfully!");
+                  }
+                });
+            } else {
+              console.log("Supabase full settings synced successfully!");
+            }
+          })
+          .catch(err => {
+            console.error("Supabase settings sync caught error:", err);
+          });
       }
 
       profileModal.classList.remove('active');
+      stopWhatsAppPolling();
       alert('Business Settings sync saved successfully!');
       renderCart();
     });
@@ -6642,8 +7787,8 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
   const btnPrintTableQr = document.getElementById('btn-print-table-qr');
   const btnSimulateQrScan = document.getElementById('btn-simulate-qr-scan');
 
-  // Pre-fill todays QR metrics on load
-  updateQrStatsHeaders();
+  // Pre-fill todays QR metrics and render visual tables map on load (Made by Antigravity)
+  updateQrOrdersDashboardUI();
 
   // Listen to incoming live broadcasts
   qrOrdersChannel.addEventListener('message', (e) => {
@@ -6995,6 +8140,7 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
       supabaseClient.from('doppio_bills').insert({
         orderId: approvedBill.orderId,
         customerName: approvedBill.customerName,
+        customerPhone: approvedBill.customerPhone,
         dateTime: approvedBill.dateTime,
         items: JSON.stringify(approvedBill.items),
         subtotal: approvedBill.subtotal,
@@ -7034,6 +8180,13 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
     // Clean from pending queue
     pendingQrOrders = pendingQrOrders.filter(o => o.orderId !== orderId);
     localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+
+    // 7. Delete from Supabase pending orders queue (Made by Antigravity)
+    if (supabaseClient) {
+      supabaseClient.from('doppio_pending_orders')
+        .delete()
+        .eq('orderId', orderId).then();
+    }
 
     // Re-render UI
     updateQrOrdersDashboardUI();
@@ -7078,33 +8231,80 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
     pendingQrOrders = pendingQrOrders.filter(o => o.orderId !== orderId);
     localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
 
+    // Delete from Supabase pending orders queue (Made by Antigravity)
+    if (supabaseClient) {
+      supabaseClient.from('doppio_pending_orders')
+        .delete()
+        .eq('orderId', orderId).then();
+    }
+
     SoundEffects.playRemove();
     updateQrOrdersDashboardUI();
   }
 
-  // Open Table QR Viewer Modal
+  // Open Table QR Viewer Modal (Robust & Defensive Upgrade by Antigravity)
   function openTableQRViewerModal(tableNum) {
-    if (!qrViewerModal || !qrViewerImg || !qrViewerLinkLbl || !qrPrintTableNum || !qrViewerTitle) return;
+    console.log(`[Doppio POS] Opening QR Viewer Modal for Table ${tableNum}`);
+    
+    if (!qrViewerModal) {
+      console.error("[Doppio POS] qrViewerModal element not found in DOM! Checking ID 'qr-viewer-modal'");
+      alert("Error: 'qr-viewer-modal' container element is missing in dashboard.html!");
+      return;
+    }
 
-    SoundEffects.playClick();
+    try {
+      SoundEffects.playClick();
+    } catch (e) {
+      console.warn("Sound effects clicked play bypassed", e);
+    }
     
     const lockedLink = `${window.location.origin}/index.html?table=${tableNum}`;
     const formattedTitle = `Table 0${tableNum} QR Ordering Station`;
     
-    qrViewerTitle.textContent = formattedTitle;
-    qrPrintTableNum.textContent = `TABLE 0${tableNum}`;
-    qrViewerLinkLbl.textContent = lockedLink;
+    if (qrViewerTitle) {
+      qrViewerTitle.textContent = formattedTitle;
+    } else {
+      console.warn("[Doppio POS] 'qr-viewer-title' element not found in DOM.");
+    }
+    
+    if (qrPrintTableNum) {
+      qrPrintTableNum.textContent = `TABLE 0${tableNum}`;
+    } else {
+      console.warn("[Doppio POS] 'qr-print-table-num' element not found in DOM.");
+    }
+    
+    if (qrViewerLinkLbl) {
+      qrViewerLinkLbl.textContent = lockedLink;
+    } else {
+      console.warn("[Doppio POS] 'qr-viewer-link-lbl' element not found in DOM.");
+    }
 
     // QR dynamic server link
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(lockedLink)}`;
-    qrViewerImg.src = qrUrl;
+    if (qrViewerImg) {
+      qrViewerImg.src = qrUrl;
+    } else {
+      console.error("[Doppio POS] 'qr-viewer-img' element not found in DOM! QR cannot be displayed.");
+      alert("Error: 'qr-viewer-img' image element is missing!");
+    }
 
     // Attach local attributes to action buttons for references
-    btnPrintTableQr.setAttribute('data-link', lockedLink);
-    btnPrintTableQr.setAttribute('data-table', `0${tableNum}`);
-    btnSimulateQrScan.setAttribute('data-link', lockedLink);
+    if (btnPrintTableQr) {
+      btnPrintTableQr.setAttribute('data-link', lockedLink);
+      btnPrintTableQr.setAttribute('data-table', `0${tableNum}`);
+    } else {
+      console.warn("[Doppio POS] 'btn-print-table-qr' button not found in DOM.");
+    }
+    
+    if (btnSimulateQrScan) {
+      btnSimulateQrScan.setAttribute('data-link', lockedLink);
+    } else {
+      console.warn("[Doppio POS] 'btn-simulate-qr-scan' button not found in DOM.");
+    }
 
     qrViewerModal.style.display = 'flex';
+    qrViewerModal.classList.add('active');
+    console.log("[Doppio POS] QR Viewer Modal successfully displayed!");
   }
 
   // Print Table QR Template
@@ -7166,7 +8366,10 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
   // Close QR modal triggers
   if (qrViewerClose) {
     qrViewerClose.addEventListener('click', () => {
-      if (qrViewerModal) qrViewerModal.style.display = 'none';
+      if (qrViewerModal) {
+        qrViewerModal.classList.remove('active');
+        qrViewerModal.style.display = 'none';
+      }
     });
   }
 
@@ -7174,6 +8377,7 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
   if (qrViewerModal) {
     qrViewerModal.addEventListener('click', (e) => {
       if (e.target === qrViewerModal) {
+        qrViewerModal.classList.remove('active');
         qrViewerModal.style.display = 'none';
       }
     });
@@ -7468,6 +8672,46 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
     const gst = isGstEnabled ? Math.round(taxableAmount * (gstPercentage / 100)) : 0;
     const total = taxableAmount + gst;
 
+    // Direct POS Kitchen Feed: Push takeaway orders to KDS!
+    const mockKdsOrder = {
+      orderId: billIdToSave,
+      customerName: custName,
+      customerPhone: phoneVal,
+      dateTime: new Date().toLocaleString('en-IN'),
+      items: [...cart],
+      subtotal: subtotal,
+      discount: loyaltyDiscount,
+      gst: gst,
+      total: total,
+      paymentMethod: selectedPaymentMethod,
+      orderType: 'Takeaway',
+      tableNumber: 'ONLINE',
+      status: 'Accepted'
+    };
+    
+    // Add locally to pendingQrOrders so KDS picks it up!
+    pendingQrOrders.push(mockKdsOrder);
+    localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+
+    // Upload to Supabase to notify KDS in real-time
+    if (supabaseClient) {
+      supabaseClient.from('doppio_pending_orders').insert({
+        orderId: mockKdsOrder.orderId,
+        customerName: mockKdsOrder.customerName,
+        customerPhone: mockKdsOrder.customerPhone,
+        items: JSON.stringify(mockKdsOrder.items),
+        subtotal: mockKdsOrder.subtotal,
+        discount: mockKdsOrder.discount,
+        gst: mockKdsOrder.gst,
+        total: mockKdsOrder.total,
+        paymentMethod: mockKdsOrder.paymentMethod,
+        orderType: mockKdsOrder.orderType,
+        tableNumber: mockKdsOrder.tableNumber,
+        status: mockKdsOrder.status,
+        dateTime: mockKdsOrder.dateTime
+      }).then();
+    }
+
     originalPerformCheckout(shouldPrint);
     
     // Broadcast P2P order
@@ -7610,13 +8854,245 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
     reader.readAsArrayBuffer(file);
   }
 
+  // ==========================================
+  // KITCHEN DISPLAY SYSTEM (KDS) & TOKEN BILLBOARD (Steps 7 & 8)
+  // ==========================================
+  function renderKDSTab() {
+    const kdsGrid = document.getElementById('kds-grid');
+    const kdsCountPending = document.getElementById('kds-count-pending');
+    const kdsCountPreparing = document.getElementById('kds-count-preparing');
+    const kdsCountReady = document.getElementById('kds-count-ready');
+    
+    if (!kdsGrid) return;
+    kdsGrid.innerHTML = '';
+    
+    const pendingCount = pendingQrOrders.filter(o => o.status === 'Pending Review').length;
+    const preparingCount = pendingQrOrders.filter(o => o.status === 'Accepted').length;
+    const readyCount = pendingQrOrders.filter(o => o.status === 'Ready').length;
+    
+    if (kdsCountPending) kdsCountPending.textContent = `${pendingCount} Pending`;
+    if (kdsCountPreparing) kdsCountPreparing.textContent = `${preparingCount} Cooking`;
+    if (kdsCountReady) kdsCountReady.textContent = `${readyCount} Ready to Serve`;
+    
+    const cookingOrders = pendingQrOrders.filter(o => o.status === 'Accepted');
+    
+    if (cookingOrders.length === 0) {
+      kdsGrid.innerHTML = `
+        <div class="premium-empty-state" style="grid-column: 1 / -1; padding: 60px 20px; text-align: center; width:100%; box-sizing: border-box; background: var(--white); border-radius: var(--border-radius-md); border: 1px solid rgba(43,24,19,0.05);">
+          <i class="fa-solid fa-fire-burner" style="font-size: 36px; color: var(--accent-caramel); opacity: 0.5; margin-bottom: 16px;"></i>
+          <h3 style="margin-bottom: 8px; color: var(--primary-brand); font-family: var(--font-heading);">Kitchen is Clear</h3>
+          <p style="font-size: 11px; color: var(--text-muted); max-width: 300px; margin: 0 auto; line-height: 1.4;">All orders have been prepared and bumped. High five! 🙌</p>
+        </div>
+      `;
+      return;
+    }
+    
+    cookingOrders.forEach(order => {
+      const card = document.createElement('div');
+      const typeLower = (order.orderType || 'Takeaway').toLowerCase();
+      card.className = `kds-card type-${typeLower === 'dine-in' ? 'dine-in' : typeLower === 'swiggy' ? 'swiggy' : typeLower === 'zomato' ? 'zomato' : 'takeaway'}`;
+      
+      // Calculate elapsed minutes
+      let elapsedMins = 0;
+      if (order.dateTime) {
+        // Try parsing different formats cleanly
+        const parsedDate = Date.parse(order.dateTime) || parseCustomLocaleString(order.dateTime);
+        if (parsedDate) {
+          const elapsedMs = Date.now() - parsedDate;
+          elapsedMins = Math.max(0, Math.floor(elapsedMs / 60000));
+        }
+      }
+      
+      // Build items list
+      const itemsHtml = order.items.map((item, idx) => {
+        const checkedClass = item.isDone ? 'checked' : '';
+        const checkedAttr = item.isDone ? 'checked' : '';
+        
+        const customizations = [];
+        if (item.size && item.size !== 'Regular') customizations.push(item.size);
+        if (item.sugar && item.sugar !== 'Regular') customizations.push(item.sugar);
+        if (item.ice && item.ice !== 'Regular') customizations.push(item.ice);
+        if (item.toppings && item.toppings.length > 0) customizations.push(item.toppings.join(', '));
+        const descHtml = customizations.length > 0 ? `<span class="kds-item-desc">${customizations.join(' | ')}</span>` : '';
+        
+        return `
+          <div class="kds-item-row ${checkedClass}" data-item-idx="${idx}">
+            <input type="checkbox" ${checkedAttr}>
+            <span class="kds-item-qty">${item.qty}x</span>
+            <div style="flex:1;">
+              <span>${item.name}</span>
+              ${descHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      card.innerHTML = `
+        <div class="kds-card-header">
+          <div class="kds-card-title">
+            <i class="fa-solid fa-receipt"></i>
+            <span>${order.orderId}</span>
+            <span style="font-size: 10px; font-weight:600; color: var(--text-muted);">(${order.orderType || 'Takeaway'})</span>
+          </div>
+          <span class="kds-card-timer">${elapsedMins}m ago</span>
+        </div>
+        <div class="kds-items-list">
+          ${itemsHtml}
+        </div>
+        <div class="kds-card-footer">
+          <button class="kds-bump-btn" data-order-id="${order.orderId}">
+            <i class="fa-solid fa-circle-check"></i> BUMP
+          </button>
+        </div>
+      `;
+      
+      // Checkbox click listener
+      card.querySelectorAll('.kds-item-row input[type="checkbox"]').forEach(chk => {
+        chk.addEventListener('change', (e) => {
+          const row = chk.closest('.kds-item-row');
+          const itemIdx = parseInt(row.getAttribute('data-item-idx'));
+          if (e.target.checked) {
+            row.classList.add('checked');
+            order.items[itemIdx].isDone = true;
+          } else {
+            row.classList.remove('checked');
+            order.items[itemIdx].isDone = false;
+          }
+          localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+          
+          if (supabaseClient) {
+            supabaseClient.from('doppio_pending_orders')
+              .update({ items: JSON.stringify(order.items) })
+              .eq('orderId', order.orderId).then();
+          }
+        });
+      });
+      
+      // Bump button listener
+      card.querySelector('.kds-bump-btn').addEventListener('click', () => {
+        bumpKDSTicket(order.orderId);
+      });
+      
+      kdsGrid.appendChild(card);
+    });
+  }
+  
+  function parseCustomLocaleString(str) {
+    try {
+      // Handles localized strings like '2/6/2026, 6:50:28 AM'
+      const parts = str.split(', ');
+      if (parts.length === 2) {
+        const dateParts = parts[0].split('/');
+        if (dateParts.length === 3) {
+          const date = new Date(parts[0] + ' ' + parts[1]);
+          if (!isNaN(date.getTime())) return date.getTime();
+        }
+      }
+    } catch(e) {}
+    return null;
+  }
+  
+  function bumpKDSTicket(orderId) {
+    const order = pendingQrOrders.find(o => o.orderId === orderId);
+    if (!order) return;
+    
+    // Play kitchen bump chime
+    SoundEffects.playSuccess();
+    
+    order.status = 'Ready';
+    localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+    
+    if (supabaseClient) {
+      supabaseClient.from('doppio_pending_orders')
+        .update({ status: 'Ready' })
+        .eq('orderId', orderId).then();
+    }
+    
+    renderKDSTab();
+    renderTokensTab();
+    showNotificationToast(`Order ${orderId} prepared! Bumped to Pickup Screen.`);
+  }
+  
+  function renderTokensTab() {
+    const preparingList = document.getElementById('tokens-preparing-list');
+    const readyList = document.getElementById('tokens-ready-list');
+    
+    if (!preparingList || !readyList) return;
+    
+    preparingList.innerHTML = '';
+    readyList.innerHTML = '';
+    
+    const preparingOrders = pendingQrOrders.filter(o => o.status === 'Accepted');
+    const readyOrders = pendingQrOrders.filter(o => o.status === 'Ready');
+    
+    if (preparingOrders.length === 0) {
+      preparingList.innerHTML = '<span style="font-size:11px; color:var(--text-muted); grid-column:1/-1; text-align:center; padding:20px;">No preparing tokens.</span>';
+    } else {
+      preparingOrders.forEach(order => {
+        const badge = document.createElement('div');
+        badge.className = 'token-badge';
+        const shortToken = order.orderId.includes('-') ? order.orderId.split('-').slice(-1)[0] : order.orderId;
+        badge.textContent = `${shortToken}`;
+        preparingList.appendChild(badge);
+      });
+    }
+    
+    if (readyOrders.length === 0) {
+      readyList.innerHTML = '<span style="font-size:11px; color:var(--text-muted); grid-column:1/-1; text-align:center; padding:20px;">No ready tokens.</span>';
+    } else {
+      readyOrders.forEach(order => {
+        const badge = document.createElement('div');
+        badge.className = 'token-badge ready';
+        badge.style.cursor = 'pointer';
+        badge.title = 'Click to Pick Up & Archive';
+        
+        const shortToken = order.orderId.includes('-') ? order.orderId.split('-').slice(-1)[0] : order.orderId;
+        badge.innerHTML = `
+          <span>${shortToken}</span>
+          <div style="font-size: 8px; font-weight:800; color:var(--success-color); margin-top:2px;">READY</div>
+        `;
+        
+        badge.addEventListener('click', () => {
+          dismissToken(order.orderId);
+        });
+        
+        readyList.appendChild(badge);
+      });
+    }
+  }
+  
+  function dismissToken(orderId) {
+    SoundEffects.playClick();
+    
+    pendingQrOrders = pendingQrOrders.filter(o => o.orderId !== orderId);
+    localStorage.setItem('doppio_pending_qr_orders', JSON.stringify(pendingQrOrders));
+    
+    if (supabaseClient) {
+      supabaseClient.from('doppio_pending_orders')
+        .delete()
+        .eq('orderId', orderId).then();
+    }
+    
+    renderKDSTab();
+    renderTokensTab();
+    showNotificationToast(`Token ${orderId} picked up & archived!`);
+  }
+  
+  // Expose these functions globally so other files can call them easily
+  window.renderKDSTab = renderKDSTab;
+  window.renderTokensTab = renderTokensTab;
+  window.bumpKDSTicket = bumpKDSTicket;
+  window.dismissToken = dismissToken;
+
   // Pre-load UI states on dashboard initialization
   updateQrOrdersDashboardUI();
+  if (typeof renderKDSTab === 'function') renderKDSTab();
+  if (typeof renderTokensTab === 'function') renderTokensTab();
   updateAIForecast();
 
   // End Live QR Ordering system module
 
   // Trigger evaluation on start
-  evaluateShiftStatusUI();
+  applyFeatureToggles();
 
 });
