@@ -26,6 +26,36 @@ let connectionStatus = 'connecting'; // 'connecting', 'qr', 'ready', 'disconnect
 let qrCodeDataUrl = null;
 let linkedNumber = null;
 
+// Read secret token from environment variable (configured as a secret in HuggingFace Space)
+const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || '';
+
+// Utility to mask phone numbers in logs to prevent customer data leaks
+function maskPhone(phoneStr) {
+    if (!phoneStr) return null;
+    const clean = phoneStr.replace(/\D/g, '');
+    if (clean.length <= 4) return '****';
+    return clean.substring(0, 2) + '*'.repeat(clean.length - 6) + clean.substring(clean.length - 4);
+}
+
+// Token validation helper
+function verifyToken(req) {
+    if (!GATEWAY_TOKEN) return true; // If no token is set in environment, allow request by default (convenient for local dev)
+    
+    const authHeader = req.headers['authorization'];
+    const xToken = req.headers['x-gateway-token'];
+    let token = xToken;
+    
+    if (!token && authHeader) {
+        if (authHeader.startsWith('Bearer ')) {
+            token = authHeader.substring(7);
+        } else {
+            token = authHeader;
+        }
+    }
+    
+    return token === GATEWAY_TOKEN;
+}
+
 const os = require('os');
 const path = require('path');
 
@@ -98,16 +128,33 @@ client.on('disconnected', (reason) => {
 
 // GET Endpoint to read current gateway connection state
 app.get('/status', (req, res) => {
-    res.json({
-        status: connectionStatus,
-        authenticated: connectionStatus === 'ready',
-        number: linkedNumber,
-        qr: qrCodeDataUrl
-    });
+    const isAuthorized = verifyToken(req);
+    
+    if (isAuthorized) {
+        res.json({
+            status: connectionStatus,
+            authenticated: connectionStatus === 'ready',
+            number: linkedNumber,
+            qr: qrCodeDataUrl
+        });
+    } else {
+        // Return masked status to prevent data leaks or QR hijacking
+        res.json({
+            status: connectionStatus,
+            authenticated: connectionStatus === 'ready',
+            number: linkedNumber ? maskPhone(linkedNumber) : null,
+            qr: null, // Hide QR code from public view
+            secured: true
+        });
+    }
 });
 
 // POST Endpoint to log out / unlink the device
 app.post('/logout', async (req, res) => {
+    if (!verifyToken(req)) {
+        return res.status(401).json({ status: 'error', error: 'Unauthorized: Invalid Gateway Token' });
+    }
+
     try {
         console.log('Request received to log out WhatsApp device...');
         if (connectionStatus === 'ready') {
@@ -126,6 +173,10 @@ app.post('/logout', async (req, res) => {
 
 // HTTP API Endpoint to send receipts manually in the background
 app.post('/send', async (req, res) => {
+    if (!verifyToken(req)) {
+        return res.status(401).json({ status: 'error', error: 'Unauthorized: Invalid Gateway Token' });
+    }
+
     let { orderId, phone, message } = req.body;
     
     if (!phone || !message) {
@@ -144,7 +195,7 @@ app.post('/send', async (req, res) => {
         // Send monospaced text receipt
         await client.sendMessage(chatId, message);
         
-        console.log(`[Manual Sent] WhatsApp receipt successfully delivered to: +${phone}`);
+        console.log(`[Manual Sent] WhatsApp receipt successfully delivered to: +${maskPhone(phone)}`);
         
         // Broadcast success back to Supabase Realtime
         if (orderId) {
@@ -163,7 +214,7 @@ app.post('/send', async (req, res) => {
 
         res.json({ status: 'success', message: 'Message sent successfully' });
     } catch (err) {
-        console.error(`[Manual Error] Failed to send receipt to +${phone}:`, err.message);
+        console.error(`[Manual Error] Failed to send receipt to +${maskPhone(phone)}:`, err.message);
         
         // Broadcast failure back to Supabase Realtime
         if (orderId) {
@@ -208,7 +259,7 @@ app.post('/supabase-webhook', async (req, res) => {
         const chatId = `${phone}@c.us`;
         const message = formatReceiptText(record);
         await client.sendMessage(chatId, message);
-        console.log(`[Webhook Auto-Sent] WhatsApp receipt successfully delivered to: +${phone} for order ${orderId}`);
+        console.log(`[Webhook Auto-Sent] WhatsApp receipt successfully delivered to: +${maskPhone(phone)} for order ${orderId}`);
         
         // Broadcast success
         if (orderId) {
@@ -282,7 +333,7 @@ const realtimeChannel = supabase
                 // Dispatch message via Whatsapp
                 if (connectionStatus === 'ready') {
                     await client.sendMessage(chatId, message);
-                    console.log(`[Realtime Auto-Sent] WhatsApp receipt successfully delivered to: +${phone} for order ${orderId}`);
+                    console.log(`[Realtime Auto-Sent] WhatsApp receipt successfully delivered to: +${maskPhone(phone)} for order ${orderId}`);
                     
                     // Broadcast success back to POS Web Clients
                     const broadcastChannel = supabase.channel('whatsapp-billing-status');

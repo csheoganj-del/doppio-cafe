@@ -1478,6 +1478,39 @@
                   <label style="font-size:10px; margin-bottom:2px;">Gateway Server URL</label>
                   <input type="text" id="profile-wa-gateway-url" placeholder="e.g. http://localhost:3000" style="padding:4px 8px; font-size:11px;">
                 </div>
+
+                <!-- Dual Gateway Selection & Status Dashboard -->
+                <div style="margin-top: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.05);">
+                  <label style="font-size: 9.5px; font-weight: bold; margin-bottom: 6px; display: block; color: var(--text-dark);"><i class="fa-solid fa-network-wired"></i> Select Gateway / Live Status:</label>
+                  
+                  <!-- Local Selection Row -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <button type="button" id="wa-select-local" class="btn-secondary" style="padding: 4px 8px; font-size: 10px; flex-grow: 1; text-align: left; display: flex; align-items: center; justify-content: space-between; height: 26px; border: 1px solid rgba(0,0,0,0.1); border-radius: 4px; background: #fff; color: #333; margin-right: 8px; cursor: pointer; transition: all 0.2s;">
+                      <span><i class="fa-solid fa-desktop"></i> Local Gateway (Port 3000)</span>
+                      <span id="wa-local-badge" style="font-size: 8px; color: #666; background: rgba(0,0,0,0.05); padding: 1px 4px; border-radius: 3px;">Select</span>
+                    </button>
+                    <div style="display: flex; align-items: center; gap: 4px; min-width: 65px; justify-content: flex-end;">
+                      <span id="wa-local-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #ccc; display: inline-block;"></span>
+                      <span id="wa-local-txt" style="font-size: 9px; font-weight: bold; color: #666;">checking</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Cloud Selection Row -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+                    <button type="button" id="wa-select-cloud" class="btn-secondary" style="padding: 4px 8px; font-size: 10px; flex-grow: 1; text-align: left; display: flex; align-items: center; justify-content: space-between; height: 26px; border: 1px solid rgba(0,0,0,0.1); border-radius: 4px; background: #fff; color: #333; margin-right: 8px; cursor: pointer; transition: all 0.2s;">
+                      <span><i class="fa-solid fa-cloud"></i> Cloud Space (HuggingFace)</span>
+                      <span id="wa-cloud-badge" style="font-size: 8px; color: #666; background: rgba(0,0,0,0.05); padding: 1px 4px; border-radius: 3px;">Select</span>
+                    </button>
+                    <div style="display: flex; align-items: center; gap: 4px; min-width: 65px; justify-content: flex-end;">
+                      <span id="wa-cloud-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #ccc; display: inline-block;"></span>
+                      <span id="wa-cloud-txt" style="font-size: 9px; font-weight: bold; color: #666;">checking</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p style="font-size: 8.5px; color: #128c7e; margin: 4px 0 8px 0; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                  <i class="fa-solid fa-shuffle"></i> <strong>Smart Failover Active:</strong> POS will automatically fallback to the other gateway if one is offline!
+                </p>
                 
                 <!-- Dynamic Device Linker Area -->
                 <div id="wa-linker-area" style="margin-top: 10px; border-top: 1px solid rgba(37,211,102,0.15); padding-top: 10px;">

@@ -2928,32 +2928,48 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       
       let dispatchUrl = businessProfile.whatsappGatewayUrl.trim();
-      if (!dispatchUrl.endsWith('/send') && !dispatchUrl.endsWith('/api/mock-whatsapp') && !dispatchUrl.includes('httpbin.org')) {
-        if (dispatchUrl.endsWith('/')) {
-          dispatchUrl += 'send';
-        } else {
-          dispatchUrl += '/send';
+      
+      // Auto-failover recursive sender
+      function trySend(targetUrl, isFallback = false) {
+        let actualUrl = targetUrl;
+        if (!actualUrl.endsWith('/send') && !actualUrl.endsWith('/api/mock-whatsapp') && !actualUrl.includes('httpbin.org')) {
+          if (actualUrl.endsWith('/')) {
+            actualUrl += 'send';
+          } else {
+            actualUrl += '/send';
+          }
         }
+
+        return fetch(actualUrl, {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(payload)
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("HTTP status " + response.status);
+          }
+          return response.json().catch(() => ({}));
+        })
+        .then(data => {
+          showNotificationToast(isFallback ? "WhatsApp Sent via Backup Gateway!" : "WhatsApp Bill Sent Successfully!");
+        })
+        .catch(err => {
+          console.error("Failed to send WhatsApp bill via: " + targetUrl, err);
+          if (!isFallback) {
+            const isLocal = targetUrl.includes('localhost') || targetUrl.includes('127.0.0.1');
+            const fallbackUrl = isLocal ? 'https://kalpeshdeora1006-whatsapp-gateway.hf.space' : 'http://localhost:3000';
+            
+            showNotificationToast("Primary Gateway Offline. Trying Backup...");
+            console.log("Triggering auto-failover to backup: " + fallbackUrl);
+            return trySend(fallbackUrl, true);
+          } else {
+            showNotificationToast("All WhatsApp Gateways Offline!");
+          }
+        });
       }
 
-      fetch(dispatchUrl, {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify(payload)
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error("HTTP status " + response.status);
-        }
-        return response.json().catch(() => ({}));
-      })
-      .then(data => {
-        showNotificationToast("WhatsApp Bill Sent Successfully!");
-      })
-      .catch(err => {
-        console.error("Failed to send WhatsApp bill via gateway:", err);
-        showNotificationToast("Gateway Connection Error!");
-      });
+      trySend(dispatchUrl);
     } else {
       openManualWhatsApp(phoneNum, encodedMsg);
     }
@@ -4955,6 +4971,16 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
     const connectedContainer = document.getElementById('wa-connected-container');
     const connectedNumber = document.getElementById('wa-connected-number');
 
+    // Dual gateway selectors
+    const localBtn = document.getElementById('wa-select-local');
+    const cloudBtn = document.getElementById('wa-select-cloud');
+    const localBadge = document.getElementById('wa-local-badge');
+    const cloudBadge = document.getElementById('wa-cloud-badge');
+    const localDot = document.getElementById('wa-local-dot');
+    const cloudDot = document.getElementById('wa-cloud-dot');
+    const localTxt = document.getElementById('wa-local-txt');
+    const cloudTxt = document.getElementById('wa-cloud-txt');
+
     if (!waGatewayEnabledEl || !waGatewayEnabledEl.checked) {
       if (qrContainer) qrContainer.style.display = 'none';
       if (connectedContainer) connectedContainer.style.display = 'none';
@@ -4970,6 +4996,87 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
     if (!url) url = 'http://localhost:3000';
     if (url.endsWith('/')) url = url.slice(0, -1);
 
+    // Style the selection buttons based on currently active URL
+    const isLocalSelected = url.includes('localhost') || url.includes('127.0.0.1');
+    const isCloudSelected = url.includes('huggingface') || url.includes('hf.space');
+
+    if (localBtn && cloudBtn && localBadge && cloudBadge) {
+      if (isLocalSelected) {
+        localBtn.style.borderColor = '#128c7e';
+        localBtn.style.background = 'rgba(18,140,126,0.06)';
+        localBadge.textContent = 'Active';
+        localBadge.style.background = '#128c7e';
+        localBadge.style.color = '#fff';
+
+        cloudBtn.style.borderColor = 'rgba(0,0,0,0.1)';
+        cloudBtn.style.background = '#fff';
+        cloudBadge.textContent = 'Backup';
+        cloudBadge.style.background = 'rgba(0,0,0,0.05)';
+        cloudBadge.style.color = '#666';
+      } else if (isCloudSelected) {
+        cloudBtn.style.borderColor = '#128c7e';
+        cloudBtn.style.background = 'rgba(18,140,126,0.06)';
+        cloudBadge.textContent = 'Active';
+        cloudBadge.style.background = '#128c7e';
+        cloudBadge.style.color = '#fff';
+
+        localBtn.style.borderColor = 'rgba(0,0,0,0.1)';
+        localBtn.style.background = '#fff';
+        localBadge.textContent = 'Backup';
+        localBadge.style.background = 'rgba(0,0,0,0.05)';
+        localBadge.style.color = '#666';
+      } else {
+        localBtn.style.borderColor = 'rgba(0,0,0,0.1)';
+        localBtn.style.background = '#fff';
+        localBadge.textContent = 'Select';
+        localBadge.style.background = 'rgba(0,0,0,0.05)';
+        localBadge.style.color = '#666';
+
+        cloudBtn.style.borderColor = 'rgba(0,0,0,0.1)';
+        cloudBtn.style.background = '#fff';
+        cloudBadge.textContent = 'Select';
+        cloudBadge.style.background = 'rgba(0,0,0,0.05)';
+        cloudBadge.style.color = '#666';
+      }
+    }
+
+    // Ping Local Gateway Status
+    fetch('http://localhost:3000/status')
+      .then(res => res.json())
+      .then(data => {
+        if (localDot && localTxt) {
+          localTxt.textContent = data.status === 'ready' ? 'online' : data.status;
+          localTxt.style.color = data.status === 'ready' ? '#155724' : '#856404';
+          localDot.style.background = data.status === 'ready' ? '#28a745' : '#ffc107';
+        }
+      })
+      .catch(() => {
+        if (localDot && localTxt) {
+          localTxt.textContent = 'offline';
+          localTxt.style.color = '#721c24';
+          localDot.style.background = '#dc3545';
+        }
+      });
+
+    // Ping Cloud Gateway Status
+    fetch('https://kalpeshdeora1006-whatsapp-gateway.hf.space/status')
+      .then(res => res.json())
+      .then(data => {
+        if (cloudDot && cloudTxt) {
+          cloudTxt.textContent = data.status === 'ready' ? 'online' : data.status;
+          cloudTxt.style.color = data.status === 'ready' ? '#155724' : '#856404';
+          cloudDot.style.background = data.status === 'ready' ? '#28a745' : '#ffc107';
+        }
+      })
+      .catch(() => {
+        if (cloudDot && cloudTxt) {
+          cloudTxt.textContent = 'offline';
+          cloudTxt.style.color = '#721c24';
+          cloudDot.style.background = '#dc3545';
+        }
+      });
+
+    // Fetch details from the currently selected Gateway (for main settings display & QR code rendering)
     fetch(`${url}/status`)
       .then(res => res.json())
       .then(data => {
@@ -5015,7 +5122,7 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
         }
       })
       .catch(err => {
-        console.warn('WhatsApp gateway offline:', err.message);
+        console.warn('Selected WhatsApp gateway offline:', err.message);
         if (statusBadge) {
           statusBadge.textContent = 'OFFLINE';
           statusBadge.style.background = '#f8d7da';
@@ -5024,7 +5131,7 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
         if (connectedContainer) connectedContainer.style.display = 'none';
         if (qrContainer) qrContainer.style.display = 'flex';
         if (qrSpinner) {
-          qrSpinner.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="margin-bottom: 6px; font-size: 16px; color: #d32f2f;"></i><br>Gateway Server Offline<br><span style="font-size: 8px; color: #666; margin-top: 4px; display: block;">Start local gateway server</span>`;
+          qrSpinner.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="margin-bottom: 6px; font-size: 16px; color: #d32f2f;"></i><br>Gateway Server Offline<br><span style="font-size: 8px; color: #666; margin-top: 4px; display: block;">Check selected server or start local gateway</span>`;
           qrSpinner.style.display = 'block';
         }
         if (qrImg) qrImg.style.display = 'none';
@@ -5122,6 +5229,32 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
   }
 
   const waGatewayUrlEl = document.getElementById('profile-wa-gateway-url');
+  
+  // Quick gateway selector button click listeners
+  const waSelectLocalBtn = document.getElementById('wa-select-local');
+  if (waSelectLocalBtn) {
+    waSelectLocalBtn.addEventListener('click', () => {
+      SoundEffects.playClick();
+      if (waGatewayUrlEl) {
+        waGatewayUrlEl.value = 'http://localhost:3000';
+        const changeEvent = new Event('change');
+        waGatewayUrlEl.dispatchEvent(changeEvent);
+      }
+    });
+  }
+
+  const waSelectCloudBtn = document.getElementById('wa-select-cloud');
+  if (waSelectCloudBtn) {
+    waSelectCloudBtn.addEventListener('click', () => {
+      SoundEffects.playClick();
+      if (waGatewayUrlEl) {
+        waGatewayUrlEl.value = 'https://kalpeshdeora1006-whatsapp-gateway.hf.space';
+        const changeEvent = new Event('change');
+        waGatewayUrlEl.dispatchEvent(changeEvent);
+      }
+    });
+  }
+
   if (waGatewayUrlEl) {
     waGatewayUrlEl.addEventListener('change', () => {
       pollWhatsAppGatewayStatus();
