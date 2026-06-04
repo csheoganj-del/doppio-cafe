@@ -10,29 +10,30 @@
   
   <style>
     :root {
-      /* Premium Dark Hospitality Color System */
-      --bg-dark: #0A0806;              /* Primary background: near-black charred wood */
-      --bg-surface: #120F0D;           /* Secondary surface: elevated warm graphite */
-      --bg-surface-elevated: #1A1512;  /* Card surface: toasted oak */
-      --bg-surface-hover: #221D18;     /* Hover state: warm roast */
+      /* Premium Zomato & Swiggy Inspired Color System */
+      --bg-dark: #0D0F12;              /* Deep Indigo-Charcoal background */
+      --bg-surface: #15181E;           /* Secondary surface: elevated slate-navy */
+      --bg-surface-elevated: #1D2128;  /* Card surface: slate card */
+      --bg-surface-hover: #262B34;     /* Hover state: warm roast */
 
-      --primary-brand: #C87A53;        /* Primary accent: warm terracotta orange */
-      --primary-hover: #D98C64;        /* Hover accent: spiced cinnamon honey */
-      --primary-glow: rgba(200, 122, 83, 0.06); /* Very subtle warm glow */
+      --primary-brand: #FC8019;        /* Primary accent: Swiggy Tangerine Orange */
+      --primary-hover: #FD9139;        /* Hover accent: Swiggy Bright Orange */
+      --accent-red: #E23744;           /* Secondary accent: Zomato Crimson Red */
+      --primary-glow: rgba(252, 128, 25, 0.06); /* Very subtle warm glow */
 
-      --text-main: #F5EFEB;            /* Primary text: warm latte cream */
-      --text-secondary: #BCAE9F;       /* Secondary text: toasted sesame / oat gray */
-      --text-muted: #85766A;           /* Muted text: roasted coffee grinds */
+      --text-main: #F4F5F7;            /* Primary text: crisp off-white */
+      --text-secondary: #9FA4B0;       /* Secondary text: muted slate */
+      --text-muted: #6B7280;           /* Muted text: deep gray */
 
       --success: #22c55e;              /* Operational green */
       --success-subtle: rgba(34, 197, 94, 0.08);
       --warning: #f59e0b;              /* Operational amber warning */
       --error: #ef4444;                /* Alert red */
 
-      --border-color: rgba(245, 239, 235, 0.06); /* Primary border: soft warm rgba */
-      --border-subtle: rgba(245, 239, 235, 0.03); /* Near-invisible separator */
-      --border-accent: rgba(200, 122, 83, 0.14);  /* Soft accent border */
-      --border-accent-strong: rgba(200, 122, 83, 0.24); /* Visible accent border */
+      --border-color: rgba(252, 128, 25, 0.08); /* Primary border: orange-tinted soft rgba */
+      --border-subtle: rgba(252, 128, 25, 0.03); /* Near-invisible separator */
+      --border-accent: rgba(252, 128, 25, 0.15);  /* Soft accent border */
+      --border-accent-strong: rgba(252, 128, 25, 0.28); /* Visible accent border */
 
       --font-heading: 'Outfit', 'Inter', sans-serif;
       --font-body: 'Inter', sans-serif;
@@ -85,7 +86,7 @@
 
     /* Translucent Header */
     header {
-      background: rgba(10, 8, 6, 0.82);
+      background: rgba(13, 15, 18, 0.82);
       backdrop-filter: blur(24px) saturate(180%);
       -webkit-backdrop-filter: blur(24px) saturate(180%);
       border-bottom: 1px solid var(--border-color);
@@ -127,7 +128,7 @@
       align-items: center;
       justify-content: center;
       font-size: 13px;
-      color: var(--bg-dark);
+      color: #FFF;
       font-weight: 800;
     }
 
@@ -261,7 +262,7 @@
     }
 
     .hero-title span {
-      background: linear-gradient(135deg, #F5EFEB 20%, #BCAE9F 100%);
+      background: linear-gradient(135deg, #FFFFFF 20%, #FC8019 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -310,7 +311,7 @@
       background: var(--primary-hover);
       border-color: var(--primary-hover);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(200, 122, 83, 0.2), 0 1px 3px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 12px rgba(252, 128, 25, 0.25), 0 1px 3px rgba(0,0,0,0.4);
     }
 
     .btn-secondary {
@@ -449,7 +450,7 @@
     }
 
     .sidebar-icon.active {
-      background: rgba(200, 122, 83, 0.10);
+      background: rgba(252, 128, 25, 0.10);
       color: var(--primary-brand);
       border: 1px solid var(--border-accent);
     }
@@ -465,7 +466,7 @@
       flex-direction: column;
       gap: 16px;
       overflow-y: auto;
-      background: #0F0D0B;
+      background: #101318;
     }
 
     /* Live Analytics Grid */
@@ -642,7 +643,7 @@
     }
 
     .kds-timer {
-      color: var(--warning);
+      color: var(--accent-red);
       display: flex;
       align-items: center;
       gap: 4px;
@@ -927,13 +928,21 @@
 
     /* Embedded POS Preview inside Bento Grid */
     .bento-pos-screen {
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
+      display: flex;
+      flex-direction: column;
       width: 100%;
       height: 100%;
       padding: 12px;
-      gap: 12px;
+      gap: 8px;
       background: var(--bg-dark);
+    }
+
+    .bento-pos-split {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 8px;
+      flex: 1;
+      overflow: hidden;
     }
 
     .bento-pos-items {
@@ -1067,8 +1076,8 @@
 
     .chart-bar {
       flex: 1;
-      background: rgba(200, 122, 83, 0.12);
-      border: 1px solid rgba(200, 122, 83, 0.16);
+      background: rgba(252, 128, 25, 0.12);
+      border: 1px solid rgba(252, 128, 25, 0.16);
       border-bottom: none;
       border-radius: 2px 2px 0 0;
       position: relative;
@@ -1076,7 +1085,7 @@
     }
 
     .chart-bar:hover {
-      background: rgba(200, 122, 83, 0.3);
+      background: rgba(252, 128, 25, 0.3);
     }
 
     /* Loyalty Tier Preview */
@@ -1161,7 +1170,7 @@
       position: absolute;
       top: 20px;
       right: 24px;
-      background: rgba(200, 122, 83, 0.10);
+      background: rgba(252, 128, 25, 0.10);
       border: 1px solid var(--border-accent);
       color: var(--primary-brand);
       padding: 4px 10px;
@@ -1244,7 +1253,7 @@
 
     /* Minimal Enterprise Footer */
     footer {
-      background: #0A0806;
+      background: #0D0F12;
       padding: 100px 32px 48px;
       border-top: 1px solid var(--border-color);
     }
@@ -1544,22 +1553,26 @@
                 </div>
                 <div class="pos-billing-items">
                   <div class="pos-billing-row">
-                    <span class="pos-item-name">2x Double Cortado (Oat Milk)</span>
-                    <span class="pos-item-price">₹280.00</span>
+                    <span class="pos-item-name">2x Paneer Tikka Masala</span>
+                    <span class="pos-item-price">₹480.00</span>
                   </div>
                   <div class="pos-billing-row">
-                    <span class="pos-item-name">1x Truffle Tagliatelle Pasta</span>
-                    <span class="pos-item-price">₹740.00</span>
+                    <span class="pos-item-name">1x Butter Chicken Half</span>
+                    <span class="pos-item-price">₹380.00</span>
                   </div>
                   <div class="pos-billing-row">
-                    <span class="pos-item-name">1x Smoked Salmon Avocado Toast</span>
-                    <span class="pos-item-price">₹420.00</span>
+                    <span class="pos-item-name">3x Butter Garlic Naan</span>
+                    <span class="pos-item-price">₹150.00</span>
+                  </div>
+                  <div class="pos-billing-row">
+                    <span class="pos-item-name">2x Mango Lassi Cream</span>
+                    <span class="pos-item-price">₹180.00</span>
                   </div>
                 </div>
                 <div class="pos-divider"></div>
                 <div class="pos-checkout-total">
                   <span class="total-label">Grand Total (Incl. GST)</span>
-                  <span class="total-val">₹1,692.00</span>
+                  <span class="total-val">₹1,190.00</span>
                 </div>
                 <div class="pos-pay-btn">
                   <i class="fa-solid fa-receipt"></i> Complete & Print Invoice
@@ -1578,9 +1591,10 @@
                       <span class="kds-timer"><i class="fa-regular fa-clock"></i> 04:12m</span>
                     </div>
                     <ul class="kds-items">
-                      <li><span>2x</span> Double Cortado</li>
-                      <li><span>1x</span> Truffle Tagliatelle</li>
-                      <li><span>1x</span> Avocado Toast</li>
+                      <li><span>2x</span> Paneer Tikka</li>
+                      <li><span>1x</span> Butter Chicken</li>
+                      <li><span>3x</span> Garlic Naan</li>
+                      <li><span>2x</span> Mango Lassi</li>
                     </ul>
                   </div>
                 </div>
@@ -1591,9 +1605,9 @@
             <div class="inventory-alerts-row">
               <div class="inv-alert-card">
                 <div class="inv-name">
-                  <span class="inv-warning-dot"></span> Stock Warning: Dairy Milk (Oat & Soy variants)
+                  <span class="inv-warning-dot"></span> Stock Warning: Paneer Cubes & Fresh Cream
                 </div>
-                <span class="inv-stock-level">Low Stock (1.5L left)</span>
+                <span class="inv-stock-level">Low Stock (2.0kg left)</span>
               </div>
             </div>
           </div>
@@ -1608,7 +1622,7 @@
         </div>
         <div class="whatsapp-bubble">
           Hi Rahul! Your bill for Table 12 at <strong>Nagpur Bistro</strong> has been processed.<br><br>
-          💳 Total: <strong>₹1,692.00</strong><br>
+          💳 Total: <strong>₹1,190.00</strong><br>
           📄 View PDF receipt: <strong>codearc.co/b/1209</strong><br><br>
           Thank you for dining with us!
           <div class="whatsapp-time">
@@ -1666,48 +1680,56 @@
         </div>
         <div class="bento-preview">
           <div class="bento-pos-screen">
-            <div class="bento-pos-items">
-              <div class="bento-pos-tile">
-                <i class="fa-solid fa-mug-hot"></i>
-                <span>Espresso</span>
-                <strong>₹120</strong>
-              </div>
-              <div class="bento-pos-tile" style="border-color: var(--border-accent-strong); background: rgba(200, 122, 83, 0.06);">
-                <i class="fa-solid fa-mug-saucer"></i>
-                <span>Cortado</span>
-                <strong>₹140</strong>
-              </div>
-              <div class="bento-pos-tile">
-                <i class="fa-solid fa-stroopwafel"></i>
-                <span>Croissant</span>
-                <strong>₹180</strong>
-              </div>
-              <div class="bento-pos-tile">
-                <i class="fa-solid fa-cake-slice"></i>
-                <span>Pancake</span>
-                <strong>₹220</strong>
-              </div>
-              <div class="bento-pos-tile">
-                <i class="fa-solid fa-cookie"></i>
-                <span>Cookie</span>
-                <strong>₹90</strong>
-              </div>
-              <div class="bento-pos-tile">
-                <i class="fa-solid fa-bottle-water"></i>
-                <span>Mineral Water</span>
-                <strong>₹50</strong>
-              </div>
+            <!-- Swiggy-style Food Search Bar -->
+            <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(252, 128, 25, 0.15); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; font-size: 9px; color: var(--text-secondary); width: 100%;">
+              <i class="fa-solid fa-magnifying-glass" style="color: var(--primary-brand); font-size: 10px;"></i>
+              <span>Search dishes: Biryani, Pizza, Butter Chicken, Masala Dosa...</span>
             </div>
-            <div class="bento-pos-cart">
-              <div>
-                <div class="bento-pos-cart-title">Cart Summary</div>
-                <div class="bento-cart-list">
-                  <div><span>1x Cortado</span> <span>₹140.00</span></div>
-                  <div><span>1x Croissant</span> <span>₹180.00</span></div>
+            
+            <div class="bento-pos-split">
+              <div class="bento-pos-items">
+                <div class="bento-pos-tile">
+                  <i class="fa-solid fa-fire"></i>
+                  <span>Paneer Tikka</span>
+                  <strong>₹240</strong>
+                </div>
+                <div class="bento-pos-tile" style="border-color: var(--border-accent-strong); background: rgba(252, 128, 25, 0.06);">
+                  <i class="fa-solid fa-bowl-food"></i>
+                  <span>Butter Chicken</span>
+                  <strong>₹380</strong>
+                </div>
+                <div class="bento-pos-tile">
+                  <i class="fa-solid fa-bread-slice"></i>
+                  <span>Butter Naan</span>
+                  <strong>₹50</strong>
+                </div>
+                <div class="bento-pos-tile">
+                  <i class="fa-solid fa-circle-dot"></i>
+                  <span>Masala Dosa</span>
+                  <strong>₹120</strong>
+                </div>
+                <div class="bento-pos-tile">
+                  <i class="fa-solid fa-ice-cream"></i>
+                  <span>Gulab Jamun</span>
+                  <strong>₹80</strong>
+                </div>
+                <div class="bento-pos-tile">
+                  <i class="fa-solid fa-glass-water"></i>
+                  <span>Mango Lassi</span>
+                  <strong>₹90</strong>
                 </div>
               </div>
-              <div style="font-size: 10px; font-weight: 700; color: var(--primary-brand); text-align: right; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.03);">
-                Total: ₹320.00
+              <div class="bento-pos-cart">
+                <div>
+                  <div class="bento-pos-cart-title">Cart Summary</div>
+                  <div class="bento-cart-list">
+                    <div><span>1x Butter Chicken</span> <span>₹380.00</span></div>
+                    <div><span>2x Butter Naan</span> <span>₹100.00</span></div>
+                  </div>
+                </div>
+                <div style="font-size: 10px; font-weight: 700; color: var(--primary-brand); text-align: right; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.03);">
+                  Total: ₹480.00
+                </div>
               </div>
             </div>
           </div>
@@ -1724,11 +1746,11 @@
           <div class="bento-kds-ticket">
             <div class="kds-card-header" style="margin-bottom: 8px;">
               <span style="font-weight:600; color: var(--text-main); font-size: 11px;">Kitchen Queue #1210</span>
-              <span style="color: var(--success); font-size: 11px;"><i class="fa-regular fa-clock"></i> 02:44m</span>
+              <span style="color: var(--accent-red); font-size: 11px;"><i class="fa-regular fa-clock"></i> 02:44m</span>
             </div>
             <div style="font-size: 10.5px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 4px;">
-              <div>• 1x Spicy Arrabiata Pasta</div>
-              <div>• 2x Limoncello Cold Brew</div>
+              <div>• 1x Paneer Butter Masala</div>
+              <div>• 2x Mango Lassi Cream</div>
             </div>
           </div>
         </div>
@@ -1793,13 +1815,13 @@
       <div class="bento-card">
         <div class="bento-text">
           <h3 class="bento-title">Loyalty Database Ledger</h3>
-          <p class="bento-desc">Create profiles automatically during checkouts. Segment clients into tier-based discount programs effortlessly.</p>
+          <p class="bento-desc">Create profiles automatically during checkouts. Segment clients into premium tiers like Zomato Gold or Swiggy One VIP program links.</p>
         </div>
         <div class="bento-preview">
-          <div class="bento-loyalty-card">
-            <div class="bento-loyalty-tier">Platinum VIP member</div>
-            <div style="font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Rahul Mehta</div>
-            <div style="font-size: 10px; color: var(--text-secondary);">18 Visits • Avg Ticket ₹1,420</div>
+          <div class="bento-loyalty-card" style="background: linear-gradient(135deg, #1d1911 0%, #151109 100%); border: 1px solid #d4af37; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.1);">
+            <div class="bento-loyalty-tier" style="background: rgba(212, 175, 55, 0.15); color: #ffd700; border-color: #d4af37;">Zomato Gold VIP</div>
+            <div style="font-size: 13px; font-weight: 700; color: #ffd700; margin-bottom: 4px;">Rahul Mehta <span style="font-size:9.5px; color: #22c55e; margin-left: 6px;"><i class="fa-solid fa-star"></i> 4.9 Rating</span></div>
+            <div style="font-size: 10px; color: var(--text-secondary);">24 Orders • Avg Check ₹1,190.00</div>
           </div>
         </div>
       </div>
@@ -1814,7 +1836,7 @@
           <div class="bento-whatsapp-preview">
             <div class="whatsapp-bubble" style="width: 260px;">
               ✅ <strong>Nagpur Bistro</strong> Order Recieved!<br>
-              Bill Amount: <strong>₹520.00</strong><br>
+              Bill Amount: <strong>₹480.00</strong><br>
               Order Status: <strong>Serving</strong><br>
               Link: <strong>codearc.co/b/1211</strong>
               <div class="whatsapp-time">17:26 <i class="fa-solid fa-check-double"></i></div>
