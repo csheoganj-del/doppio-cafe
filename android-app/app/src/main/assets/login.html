@@ -355,11 +355,34 @@
           const userLower = userVal.toLowerCase();
           const hashPwd = await sha256(pwdVal);
 
-          if ((userLower === 'bonie' && hashPwd === '94fc8a8d6e4987e5698d49128da76928b31e8059839cad4b933f53f4b2635eda') || 
-              (userLower === 'staff' && hashPwd === '10176e7b7b24d317acfcf8d2064cfd2f24e154f7b5a96603077d5ef813d6a6b6')) {
+          let authenticated = false;
+          let role = 'cashier'; // default fallback
+
+          if (userLower === 'bonie' && hashPwd === '94fc8a8d6e4987e5698d49128da76928b31e8059839cad4b933f53f4b2635eda') {
+            authenticated = true;
+            role = 'admin'; // Bonie is the manager
+          } else if (userLower === 'staff' && hashPwd === '10176e7b7b24d317acfcf8d2064cfd2f24e154f7b5a96603077d5ef813d6a6b6') {
+            authenticated = true;
+            role = 'cashier';
+          } else if (userLower === 'admin' && hashPwd === '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918') {
+            authenticated = true;
+            role = 'admin';
+          } else if (userLower === 'waiter' && hashPwd === 'f81907cb3c5905d43818e6c4669862da157778b403487c95e1eb24606ffb7e41') {
+            authenticated = true;
+            role = 'waiter';
+          } else if (userLower === 'kitchen' && hashPwd === '4f51e048d0879685600beff68e8339b699c2dbd11124b6f17849e49c7161b32e') {
+            authenticated = true;
+            role = 'kitchen';
+          } else if (userLower === 'display' && hashPwd === '691ebff078c59367db6ec70092f694ef0b9fe4ff78bc70bf1390494be9090aa9') {
+            authenticated = true;
+            role = 'customer_display';
+          }
+
+          if (authenticated) {
             // Store credentials matching Web portal logic
             sessionStorage.setItem('just_logged_in', 'true');
             sessionStorage.setItem('logged_in_user', userVal);
+            sessionStorage.setItem('logged_in_role', role);
             
             // Native vibration on success
             if (window.AndroidInterface) {

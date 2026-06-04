@@ -62,7 +62,7 @@ const path = require('path');
 // Determine data path dynamically to support both Windows local execution and Linux cloud containers
 let authDataPath = path.join(__dirname, '.wwebjs_auth');
 if (os.platform() === 'win32') {
-    authDataPath = 'C:\\Users\\KALPESH DEORA\\.gemini\\antigravity\\doppio-auth';
+    authDataPath = path.join(os.homedir(), '.gemini', 'antigravity', 'doppio-auth');
 }
 
 // Initialize WhatsApp client with local session caching
