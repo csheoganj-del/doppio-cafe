@@ -466,7 +466,7 @@
       flex-direction: column;
       gap: 16px;
       overflow-y: auto;
-      background: #141416;
+      background: var(--bg-surface);
     }
 
     /* Live Analytics Grid */
@@ -477,7 +477,7 @@
     }
 
     .stat-mini-card {
-      background: var(--bg-surface);
+      background: var(--bg-surface-elevated);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 12px;
@@ -516,7 +516,7 @@
     }
 
     .panel-widget {
-      background: var(--bg-surface);
+      background: var(--bg-surface-elevated);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
       padding: 14px;
@@ -678,7 +678,7 @@
     }
 
     .inv-alert-card {
-      background: var(--bg-surface);
+      background: var(--bg-surface-elevated);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 10px 14px;
@@ -1120,7 +1120,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0D1419;
+      background: #E5DDD5;
     }
 
     /* Pricing Section */
@@ -1453,6 +1453,218 @@
         width: 100%;
       }
     }
+
+    /* Operations Directory Styles */
+    .modules-section {
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      padding: 120px 32px;
+    }
+
+    .modules-container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+
+    .module-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      transition: var(--transition);
+    }
+
+    .module-card:hover {
+      border-color: var(--primary-brand);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .module-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(252, 128, 25, 0.08);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: var(--primary-brand);
+      margin-bottom: 20px;
+      transition: var(--transition);
+    }
+
+    .module-card:hover .module-icon {
+      background: var(--primary-brand);
+      color: #FFFFFF;
+      transform: scale(1.05);
+    }
+
+    .module-title {
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 10px;
+    }
+
+    .module-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Sync Highlights Banner */
+    .sync-highlight-banner {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      padding: 48px;
+      margin-top: 64px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .sync-banner-content {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      align-items: center;
+      gap: 48px;
+    }
+
+    .sync-banner-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--primary-brand);
+      background: rgba(252, 128, 25, 0.06);
+      border: 1px solid var(--border-accent);
+      padding: 5px 12px;
+      border-radius: 50px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sync-banner-text h3 {
+      font-family: var(--font-heading);
+      font-size: 32px;
+      font-weight: 800;
+      margin: 20px 0 12px;
+      color: var(--text-main);
+      letter-spacing: -0.8px;
+      line-height: 1.2;
+    }
+
+    .sync-banner-text p {
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .sync-banner-graphics {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .sync-device-circle {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: 2px dashed rgba(252, 128, 25, 0.2);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .sync-device-circle i {
+      font-size: 24px;
+      color: var(--primary-brand);
+      position: absolute;
+      transition: var(--transition);
+    }
+
+    .sync-device-circle i:hover {
+      transform: scale(1.2);
+    }
+
+    .device-pos {
+      top: 15px;
+      left: calc(50% - 12px);
+    }
+
+    .device-phone {
+      bottom: 20px;
+      left: 20px;
+    }
+
+    .device-desktop {
+      bottom: 20px;
+      right: 20px;
+    }
+
+    .sync-pulse {
+      width: 70px;
+      height: 70px;
+      background: rgba(252, 128, 25, 0.08);
+      border-radius: 50%;
+      animation: sync-pulsate 2.5s infinite ease-in-out;
+      border: 1px solid rgba(252, 128, 25, 0.15);
+    }
+
+    @keyframes sync-pulsate {
+      0% { transform: scale(0.85); opacity: 0.4; }
+      50% { transform: scale(1.2); opacity: 0.8; }
+      100% { transform: scale(0.85); opacity: 0.4; }
+    }
+
+    @media (max-width: 1024px) {
+      .modules-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .sync-banner-content {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        text-align: center;
+      }
+      .sync-banner-text {
+        align-items: center;
+      }
+      .sync-banner-graphics {
+        margin-top: 16px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .modules-grid {
+        grid-template-columns: 1fr;
+      }
+      .sync-highlight-banner {
+        padding: 24px;
+      }
+      .sync-banner-text h3 {
+        font-size: 24px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1666,9 +1878,9 @@
   <!-- Bento Grid Features Section -->
   <section class="features-section" id="features">
     <div class="section-head">
-      <span class="section-label">Operational Core</span>
-      <h2 class="section-head-title">Everything you need to run high-volume food outlets.</h2>
-      <p class="section-head-desc">Avoid fragmented software. Unify ordering, prep queues, bills dispatch, and automated client loyalty records under one single, high-fidelity platform.</p>
+      <span class="section-label">Operations Suite</span>
+      <h2 class="section-head-title">Unified FOH Billing and BOH Preparation Suite.</h2>
+      <p class="section-head-desc">Avoid fragmented apps and lost orders. RestoSuite brings your entire ordering, prep queues, ingredient tracking, and patron records into a single high-fidelity terminal.</p>
     </div>
     
     <div class="bento-grid">
@@ -1676,14 +1888,14 @@
       <div class="bento-card bento-col-2">
         <div class="bento-text">
           <h3 class="bento-title">High-Speed POS Register Grid</h3>
-          <p class="bento-desc">A keyboard-friendly, high-contrast grid built for cashier speed. Quickly category-sort items, manage open checks, customize item modifiers, and process UPI checkout scripts in seconds.</p>
+          <p class="bento-desc">Lightning-fast cashier billing screen optimized for high-volume service. Features visual modifiers selection, dynamic seat mappings, custom menus, and lightning-fast checkout actions.</p>
         </div>
         <div class="bento-preview">
           <div class="bento-pos-screen">
-            <!-- Swiggy-style Food Search Bar -->
-            <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(245, 158, 66, 0.15); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; font-size: 9px; color: var(--text-secondary); width: 100%;">
+            <!-- Food Search Bar Mockup -->
+            <div style="background: rgba(0, 0, 0, 0.02); border: 1px solid rgba(252, 128, 25, 0.15); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; font-size: 9px; color: var(--text-secondary); width: 100%;">
               <i class="fa-solid fa-magnifying-glass" style="color: var(--primary-brand); font-size: 10px;"></i>
-              <span>Search dishes: Biryani, Pizza, Butter Chicken, Masala Dosa...</span>
+              <span>Search menu: Butter Chicken, Paneer Tikka, Garlic Naan, Mango Lassi...</span>
             </div>
             
             <div class="bento-pos-split">
@@ -1693,7 +1905,7 @@
                   <span>Paneer Tikka</span>
                   <strong>₹240</strong>
                 </div>
-                <div class="bento-pos-tile" style="border-color: var(--border-accent-strong); background: rgba(245, 158, 66, 0.06);">
+                <div class="bento-pos-tile" style="border-color: var(--primary-brand); background: rgba(252, 128, 25, 0.03);">
                   <i class="fa-solid fa-bowl-food"></i>
                   <span>Butter Chicken</span>
                   <strong>₹380</strong>
@@ -1727,7 +1939,7 @@
                     <div><span>2x Butter Naan</span> <span>₹100.00</span></div>
                   </div>
                 </div>
-                <div style="font-size: 10px; font-weight: 700; color: var(--primary-brand); text-align: right; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.03);">
+                <div style="font-size: 10px; font-weight: 700; color: var(--primary-brand); text-align: right; padding-top: 6px; border-top: 1px solid var(--border-color);">
                   Total: ₹480.00
                 </div>
               </div>
@@ -1736,11 +1948,11 @@
         </div>
       </div>
       
-      <!-- Feature 2: Live KDS Ticket (Span 1) -->
+      <!-- Feature 2: Kitchen KDS (Span 1) -->
       <div class="bento-card">
         <div class="bento-text">
-          <h3 class="bento-title">Kitchen KDS Timers</h3>
-          <p class="bento-desc">Live kitchen orders update instantly with color-coded preparation targets, warning staff of delays to optimize output.</p>
+          <h3 class="bento-title">Kitchen Prep KDS Console</h3>
+          <p class="bento-desc">Eradicate lost paper tickets. Display incoming orders digitally with color-coded preparation targets, warning staff of delays in real-time.</p>
         </div>
         <div class="bento-preview">
           <div class="bento-kds-ticket">
@@ -1756,11 +1968,11 @@
         </div>
       </div>
 
-      <!-- Feature 3: Inventory Alerts (Span 1) -->
+      <!-- Feature 3: Gram-Level Stock (Span 1) -->
       <div class="bento-card">
         <div class="bento-text">
-          <h3 class="bento-title">Real-Time Ingredient Stock</h3>
-          <p class="bento-desc">Track ingredients down to the gram. Automatic warnings appear on the POS screen if stocks run critically thin.</p>
+          <h3 class="bento-title">Gram-Level Stock Auto-Deductions</h3>
+          <p class="bento-desc">Track raw inventory down to the gram. RestoSuite uses active recipe formulas to subtract ingredients and trigger alerts when items run thin.</p>
         </div>
         <div class="bento-preview">
           <div class="bento-stocks-list">
@@ -1775,7 +1987,7 @@
             </div>
             <div class="bento-stock-row">
               <div class="bento-stock-header">
-                <span>Fresh Avocado Slices</span>
+                <span>Fresh Cream Cubes</span>
                 <span style="color: var(--warning);">12% (Low)</span>
               </div>
               <div class="bento-stock-bar">
@@ -1786,18 +1998,18 @@
         </div>
       </div>
 
-      <!-- Feature 4: Revenue & Splits (Span 2) -->
+      <!-- Feature 4: Shift Reconciliation (Span 2) -->
       <div class="bento-card bento-col-2">
         <div class="bento-text">
-          <h3 class="bento-title">Operational Revenue Studio</h3>
-          <p class="bento-desc">Dive into peak hour sales volumes, hourly terminal logs, and payment method segregations. RestoSuite aggregates all transactions instantly into clear, exportable CSV reports.</p>
+          <h3 class="bento-title">Cashier Shift Reconciliation Studio</h3>
+          <p class="bento-desc">Perform end-of-shift audits, track cash-to-UPI payment splits, and analyze net turns. Proactively manage cash register drops and export daily tax reports instantly.</p>
         </div>
         <div class="bento-preview">
           <div class="bento-analytics-wrapper">
             <div class="bento-analytics-left">
               <div style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">UPI Gateway Share</div>
               <div style="font-size: 20px; font-weight: 700; color: var(--text-main); font-family: var(--font-heading);">84.6% <span style="font-size:10px; color: var(--success); font-family: var(--font-body); font-weight:500;">+2.4%</span></div>
-              <div style="font-size: 9.5px; color: var(--text-muted); line-height: 1.4;">Automated reconciliation of Nagpur bistro registers.</div>
+              <div style="font-size: 9.5px; color: var(--text-muted); line-height: 1.4;">Automated payment reconciliations of active restaurant registers.</div>
             </div>
             <div class="bento-chart-container">
               <div class="chart-bar" style="height: 30%;"></div>
@@ -1814,14 +2026,14 @@
       <!-- Feature 5: CRM & Loyalty (Span 1) -->
       <div class="bento-card">
         <div class="bento-text">
-          <h3 class="bento-title">Loyalty Database Ledger</h3>
-          <p class="bento-desc">Create profiles automatically during checkouts. Segment clients into premium tiers like Zomato Gold or Swiggy One VIP program links.</p>
+          <h3 class="bento-title">Dynamic Patron Loyalty CRM</h3>
+          <p class="bento-desc">Record patron details directly at checkout. Segment dining history automatically to track average check sizes and build custom VIP tier tiers.</p>
         </div>
         <div class="bento-preview">
           <div class="bento-loyalty-card" style="background: linear-gradient(135deg, #FFFDF9 0%, #FAF5EB 100%); border: 1px solid #D4AF37; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.08);">
-            <div class="bento-loyalty-tier" style="background: rgba(212, 175, 55, 0.15); color: #B48A1D; border-color: rgba(212, 175, 55, 0.25);">Zomato Gold VIP</div>
+            <div class="bento-loyalty-tier" style="background: rgba(212, 175, 55, 0.15); color: #B48A1D; border-color: rgba(212, 175, 55, 0.25);">Zomato Gold VIP Link</div>
             <div style="font-size: 13px; font-weight: 700; color: #8C6615; margin-bottom: 4px;">Rahul Mehta <span style="font-size:9.5px; color: #22c55e; margin-left: 6px;"><i class="fa-solid fa-star"></i> 4.9 Rating</span></div>
-            <div style="font-size: 10px; color: var(--text-secondary);">24 Orders • Avg Check ₹1,190.00</div>
+            <div style="font-size: 10px; color: var(--text-secondary);">24 Visits • Avg Check ₹1,190.00</div>
           </div>
         </div>
       </div>
@@ -1829,17 +2041,122 @@
       <!-- Feature 6: WhatsApp Invoices (Span 2) -->
       <div class="bento-card bento-col-2">
         <div class="bento-text">
-          <h3 class="bento-title">Automated Paperless WhatsApp Invoices</h3>
-          <p class="bento-desc">Save paper costs. Integrate the built-in WhatsApp gateway server to dispatch formatted bills directly to client profiles, increasing customer retention and ratings.</p>
+          <h3 class="bento-title">Direct WhatsApp Digital Billing</h3>
+          <p class="bento-desc">Eradicate paper check roll expenses. Push formatted PDF bills directly to client WhatsApp profiles to increase customer retention and collect feedback reviews.</p>
         </div>
         <div class="bento-preview">
           <div class="bento-whatsapp-preview">
             <div class="whatsapp-bubble" style="width: 260px;">
-              ✅ <strong>Nagpur Bistro</strong> Order Recieved!<br>
+              ✅ <strong>Nagpur Bistro</strong> Order Received!<br>
               Bill Amount: <strong>₹480.00</strong><br>
               Order Status: <strong>Serving</strong><br>
               Link: <strong>codearc.co/b/1211</strong>
               <div class="whatsapp-time">17:26 <i class="fa-solid fa-check-double"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 Core Operations Engine Modules Directory -->
+  <section class="modules-section" id="modules">
+    <div class="modules-container">
+      <div class="section-head">
+        <span class="section-label">Operations Directory</span>
+        <h2 class="section-head-title">12 Core Engine Modules. Zero Fragmentation.</h2>
+        <p class="section-head-desc">Unify your entire cafe or restaurant operations. Every terminal is designed to speed up service lines and synchronize staff in real-time.</p>
+      </div>
+
+      <div class="modules-grid">
+        <!-- Card 1 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-mug-hot"></i></div>
+          <h4 class="module-title">Takeaway POS Grid</h4>
+          <p class="module-text">Lightning-fast cashier billing register with instant category toggles, custom item modifiers, and split payments (UPI, cash, card).</p>
+        </div>
+        <!-- Card 2 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-qrcode"></i></div>
+          <h4 class="module-title">Live Table Orders</h4>
+          <p class="module-text">Dynamic QR code self-service dine-in maps. Orders placed by patrons stream straight to cashiers for validation and approval.</p>
+        </div>
+        <!-- Card 3 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-cloud-arrow-down"></i></div>
+          <h4 class="module-title">Delivery Platform Integrations</h4>
+          <p class="module-text">Consolidate third-party online delivery streams into a single dashboard queue, eliminating the clutter of multiple tablets.</p>
+        </div>
+        <!-- Card 4 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-tv"></i></div>
+          <h4 class="module-title">Kitchen KDS Console</h4>
+          <p class="module-text">High-visibility prep tickets with visual countdown alerts and target markers to keep cooks in sync and eliminate paper waste.</p>
+        </div>
+        <!-- Card 5 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-ticket"></i></div>
+          <h4 class="module-title">Smart Vocal Token Board</h4>
+          <p class="module-text">Vocal sound announcer synthesized directly on terminals to notify waiting guests of ready pickups without shouting.</p>
+        </div>
+        <!-- Card 6 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+          <h4 class="module-title">Bills & Invoices Ledger</h4>
+          <p class="module-text">Comprehensive transactional history vault with rapid filters, search, splits audits, and checkout adjustment logs.</p>
+        </div>
+        <!-- Card 7 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+          <h4 class="module-title">Gram-Level Inventory</h4>
+          <p class="module-text">Automated ingredient deductions based on active recipes. Instantly triggers alert notices when items run below thresholds.</p>
+        </div>
+        <!-- Card 8 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-chart-line"></i></div>
+          <h4 class="module-title">Sales Analytics Studio</h4>
+          <p class="module-text">Deep visual insights into shift closings, daily cashier reconciliation audits, hourly volume peaks, and payment type splits.</p>
+        </div>
+        <!-- Card 9 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-pen-to-square"></i></div>
+          <h4 class="module-title">Dynamic Menu Editor</h4>
+          <p class="module-text">Instant digital pricing and catalog modifications. Mark dishes as out-of-stock instantly across all terminals and client QR menus.</p>
+        </div>
+        <!-- Card 10 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-users-rectangle"></i></div>
+          <h4 class="module-title">VIP Loyalty CRM</h4>
+          <p class="module-text">Compile patron profiles automatically during checkout to track visit metrics, check size averages, and assign Gold tiers.</p>
+        </div>
+        <!-- Card 11 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-calculator"></i></div>
+          <h4 class="module-title">Auto-Tax & GST Compiler</h4>
+          <p class="module-text">Automatic breakdown of CGST/SGST per item, and one-click spreadsheet compilations formatted for direct GSTR-1 tax compliance reporting.</p>
+        </div>
+        <!-- Card 12 -->
+        <div class="module-card">
+          <div class="module-icon"><i class="fa-solid fa-users"></i></div>
+          <h4 class="module-title">Employee Ledger & Roles</h4>
+          <p class="module-text">Secure role-based views (Manager, Cashier, Kitchen) with custom access limits, shift logins tracking, and operational action audits.</p>
+        </div>
+      </div>
+
+      <!-- Live Sync & Sync Shield Highlight -->
+      <div class="sync-highlight-banner">
+        <div class="sync-banner-content">
+          <div class="sync-banner-text">
+            <span class="sync-badge"><i class="fa-solid fa-arrows-spin"></i> Direct Client Sync Gateway</span>
+            <h3>Continuous Syncing &amp; Dual-Vault Protection</h3>
+            <p>Every terminal synchronizes instantaneously. Carts, table layouts, and alerts updates across all client registers, tablet monitors, and manager dashboards in real-time. If the internet drops, our <strong>Dual-Vault Offline Shield</strong> backs up data locally and triggers an automatic synchronization sweep once reconnected.</p>
+          </div>
+          <div class="sync-banner-graphics">
+            <div class="sync-device-circle">
+              <i class="fa-solid fa-tablet-screen-button device-pos"></i>
+              <i class="fa-solid fa-mobile-screen-button device-phone"></i>
+              <i class="fa-solid fa-computer device-desktop"></i>
+              <div class="sync-pulse"></div>
             </div>
           </div>
         </div>
