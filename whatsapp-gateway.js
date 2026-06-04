@@ -838,6 +838,62 @@ app.get('/', (req, res) => {
     `);
 });
 
+// GET Endpoint to debug and manually trigger polling fallback (Made by Antigravity)
+app.get('/debug-poll', async (req, res) => {
+    try {
+        console.log('[Debug Poll] Triggering polling fallback manually...');
+        if (!supabaseService) {
+            return res.json({ status: 'error', reason: 'SUPABASE_SERVICE_KEY not set' });
+        }
+
+        // 1. Get all registrations from saas_tenants in the last 24 hours
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: tenants, error: tenantErr } = await supabaseService
+            .from('saas_tenants')
+            .select('*')
+            .gt('created_at', oneDayAgo);
+
+        if (tenantErr) {
+            return res.json({ status: 'error', location: 'saas_tenants select', error: tenantErr });
+        }
+
+        // 2. Get all notified slugs from gateway_health_log
+        const { data: logs, error: logErr } = await supabaseService
+            .from('gateway_health_log')
+            .select('details')
+            .eq('event', 'registration_received')
+            .gt('created_at', oneDayAgo);
+
+        if (logErr) {
+            return res.json({ status: 'error', location: 'gateway_health_log select', error: logErr });
+        }
+
+        const notifiedSlugs = [];
+        if (logs) {
+            logs.forEach(log => {
+                if (log.details && log.details.slug) {
+                    notifiedSlugs.push(log.details.slug);
+                }
+            });
+        }
+
+        // 3. Process
+        const results = [];
+        for (const tenant of tenants) {
+            const alreadyNotified = notifiedSlugs.includes(tenant.slug);
+            results.push({ name: tenant.name, slug: tenant.slug, alreadyNotified });
+            if (!alreadyNotified) {
+                await handleNewRegistrationNotification(tenant);
+            }
+        }
+
+        return res.json({ status: 'success', tenantsCount: tenants.length, results });
+
+    } catch (err) {
+        return res.json({ status: 'error', message: err.message, stack: err.stack });
+    }
+});
+
 // GET Endpoint to read current gateway connection state
 app.get('/status', (req, res) => {
     const isAuthorized = verifyToken(req);
