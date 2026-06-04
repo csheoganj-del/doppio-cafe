@@ -1441,9 +1441,19 @@
       }
 
       .outlets-inner {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 24px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 28px;
+        justify-items: center;
+      }
+
+      .proof-divider {
+        display: none;
+      }
+      
+      .proof-metric {
+        padding: 0;
+        text-align: center;
       }
 
       .outlets-list {
@@ -1451,6 +1461,133 @@
         align-items: flex-start;
         gap: 16px;
         width: 100%;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .btn-login {
+        display: none;
+      }
+      .nav-container {
+        padding: 12px 16px;
+      }
+      .logo {
+        font-size: 18px;
+      }
+      .btn-portal {
+        padding: 6px 12px;
+        font-size: 12.5px;
+      }
+      
+      .hero {
+        padding: 120px 16px 64px;
+        gap: 32px;
+      }
+      .hero-badge {
+        margin-bottom: 16px;
+      }
+      .hero-title {
+        font-size: 32px;
+        letter-spacing: -1.2px;
+      }
+      .hero-desc {
+        font-size: 14.5px;
+        margin-bottom: 32px;
+      }
+      .hero-actions {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+      }
+      .hero-actions .btn {
+        width: 100%;
+      }
+      .hero-meta {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* Mockup Dashboard Responsiveness on Mobile */
+      .dashboard-body {
+        grid-template-columns: 1fr;
+        height: auto;
+        max-height: 520px;
+      }
+      .dashboard-sidebar {
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 8px 12px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        gap: 0;
+      }
+      .sidebar-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+      }
+      .dashboard-content {
+        padding: 12px;
+        max-height: 380px;
+        overflow-y: auto;
+      }
+      .dashboard-stats {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .dashboard-split {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      
+      /* WhatsApp Float on mobile */
+      .whatsapp-float {
+        position: relative;
+        bottom: 0;
+        right: 0;
+        width: 100%;
+        margin-top: 16px;
+        transform: none !important;
+      }
+
+      /* Bento Grid layout inside */
+      .bento-pos-split {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .bento-pos-items {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .bento-analytics-wrapper {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        height: auto;
+      }
+      .bento-chart-container {
+        height: 120px;
+      }
+      .bento-kds-ticket, .bento-stocks-list, .bento-loyalty-card {
+        width: 100%;
+      }
+      .bento-card {
+        padding: 24px;
+      }
+      
+      /* Pricing cards */
+      .price-card {
+        padding: 32px 20px;
+      }
+      .price-amount {
+        font-size: 32px;
+      }
+
+      /* Footer */
+      footer {
+        padding: 64px 16px 32px;
+      }
+      .footer-container {
+        gap: 40px;
       }
     }
 
