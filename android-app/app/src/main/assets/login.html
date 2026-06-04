@@ -471,56 +471,79 @@
 
       <!-- REGISTRATION FORM -->
       <form id="register-form" style="display: none;">
-        <div class="form-group">
-          <label for="reg-name">Outlet / Business Name</label>
-          <input type="text" id="reg-name" class="form-input" placeholder="e.g. Royal Restaurant & Dhaba" required>
-          <i class="fa-solid fa-store input-icon"></i>
+        
+        <!-- Step 1: Outlet Details -->
+        <div class="reg-step" id="reg-step-1">
+          <div class="form-group">
+            <label for="reg-name">Outlet / Business Name</label>
+            <input type="text" id="reg-name" class="form-input" placeholder="e.g. Royal Restaurant & Dhaba" required>
+            <i class="fa-solid fa-store input-icon"></i>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-slug">Outlet ID / Unique Slug</label>
+            <input type="text" id="reg-slug" class="form-input" placeholder="e.g. royal-dhaba (letters & hyphens)" required>
+            <i class="fa-solid fa-link input-icon"></i>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-type">Outlet Type</label>
+            <select id="reg-type" class="form-input no-icon" required>
+              <option value="restaurant">Restaurant</option>
+              <option value="cafe">Cafe / Bakery</option>
+              <option value="dhaba">Dhaba / Local Diner</option>
+              <option value="cart">Food Cart / Truck</option>
+              <option value="other">Other Food Outlet</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-email">Owner Email</label>
+            <input type="email" id="reg-email" class="form-input" placeholder="owner@email.com" required>
+            <i class="fa-solid fa-envelope input-icon"></i>
+          </div>
+
+          <button type="button" class="submit-btn" id="btn-next-step" style="margin-top: 15px;">
+            Next Step <i class="fa-solid fa-arrow-right"></i>
+          </button>
         </div>
 
-        <div class="form-group">
-          <label for="reg-slug">Outlet ID / Unique Slug</label>
-          <input type="text" id="reg-slug" class="form-input" placeholder="e.g. royal-dhaba (letters & hyphens)" required>
-          <i class="fa-solid fa-link input-icon"></i>
+        <!-- Step 2: Admin Configuration -->
+        <div class="reg-step" id="reg-step-2" style="display: none;">
+          <div class="form-group">
+            <label for="reg-whatsapp">WhatsApp Mobile Number</label>
+            <input type="tel" id="reg-whatsapp" class="form-input" placeholder="e.g. 919876543210 (with country code)" required>
+            <i class="fa-brands fa-whatsapp input-icon" style="color: #25d366;"></i>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-user">Admin Username</label>
+            <input type="text" id="reg-user" class="form-input" placeholder="e.g. admin" required>
+            <i class="fa-solid fa-user-gear input-icon"></i>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-pass">Admin Password</label>
+            <input type="password" id="reg-pass" class="form-input" placeholder="Choose Password" required>
+            <i class="fa-solid fa-key input-icon"></i>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button type="button" class="submit-btn" id="btn-prev-step" style="background: var(--bg-surface); color: var(--text-secondary); border: 1px solid var(--border-color); box-shadow: none; flex: 1; margin-top: 0;">
+              <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+            <button type="submit" class="submit-btn" style="background-color: #22c55e !important; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25); flex: 2; margin-top: 0;">
+              Register <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="reg-type">Outlet Type</label>
-          <select id="reg-type" class="form-input no-icon" required>
-            <option value="restaurant">Restaurant</option>
-            <option value="cafe">Cafe / Bakery</option>
-            <option value="dhaba">Dhaba / Local Diner</option>
-            <option value="cart">Food Cart / Truck</option>
-            <option value="other">Other Food Outlet</option>
-          </select>
+        <!-- Stepper Indicator -->
+        <div class="stepper-indicator" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 20px;">
+          <span class="step-dot active" id="dot-1" style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-brand); transition: var(--transition);"></span>
+          <span class="step-dot" id="dot-2" style="width: 8px; height: 8px; border-radius: 50%; background: var(--border-color); transition: var(--transition);"></span>
         </div>
 
-        <div class="form-group">
-          <label for="reg-email">Owner Email</label>
-          <input type="email" id="reg-email" class="form-input" placeholder="owner@email.com" required>
-          <i class="fa-solid fa-envelope input-icon"></i>
-        </div>
-
-        <div class="form-group">
-          <label for="reg-whatsapp">WhatsApp Mobile Number</label>
-          <input type="tel" id="reg-whatsapp" class="form-input" placeholder="e.g. 919876543210 (with country code)" required>
-          <i class="fa-brands fa-whatsapp input-icon" style="color: #25d366;"></i>
-        </div>
-
-        <div class="form-group">
-          <label for="reg-user">Admin Username</label>
-          <input type="text" id="reg-user" class="form-input" placeholder="e.g. admin" required>
-          <i class="fa-solid fa-user-gear input-icon"></i>
-        </div>
-
-        <div class="form-group">
-          <label for="reg-pass">Admin Password</label>
-          <input type="password" id="reg-pass" class="form-input" placeholder="Choose Password" required>
-          <i class="fa-solid fa-key input-icon"></i>
-        </div>
-
-        <button type="submit" class="submit-btn" style="background-color: #22c55e !important; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);">
-          Request Registration <i class="fa-solid fa-paper-plane"></i>
-        </button>
       </form>
 
     </div>
@@ -957,6 +980,83 @@
         });
       }
 
+      // Helper to reset registration form steps
+      function resetRegForm() {
+        if (registerForm) {
+          registerForm.reset();
+          const step1 = document.getElementById('reg-step-1');
+          const step2 = document.getElementById('reg-step-2');
+          const dot1 = document.getElementById('dot-1');
+          const dot2 = document.getElementById('dot-2');
+          if (step1) step1.style.display = 'block';
+          if (step2) step2.style.display = 'none';
+          if (dot1) {
+            dot1.classList.add('active');
+            dot1.style.background = 'var(--primary-brand)';
+          }
+          if (dot2) {
+            dot2.classList.remove('active');
+            dot2.style.background = 'var(--border-color)';
+          }
+        }
+      }
+
+      // Stepper Navigation Logic
+      const btnNextStep = document.getElementById('btn-next-step');
+      const btnPrevStep = document.getElementById('btn-prev-step');
+      
+      if (btnNextStep) {
+        btnNextStep.addEventListener('click', () => {
+          // Validate fields in step 1 only
+          const step1Inputs = document.querySelectorAll('#reg-step-1 input, #reg-step-1 select');
+          let isValid = true;
+          step1Inputs.forEach(input => {
+            if (!input.checkValidity()) {
+              input.reportValidity();
+              isValid = false;
+            }
+          });
+          
+          if (isValid) {
+            const step1 = document.getElementById('reg-step-1');
+            const step2 = document.getElementById('reg-step-2');
+            const dot1 = document.getElementById('dot-1');
+            const dot2 = document.getElementById('dot-2');
+            
+            if (step1) step1.style.display = 'none';
+            if (step2) step2.style.display = 'block';
+            if (dot1) {
+              dot1.classList.remove('active');
+              dot1.style.background = 'var(--border-color)';
+            }
+            if (dot2) {
+              dot2.classList.add('active');
+              dot2.style.background = 'var(--primary-brand)';
+            }
+          }
+        });
+      }
+
+      if (btnPrevStep) {
+        btnPrevStep.addEventListener('click', () => {
+          const step1 = document.getElementById('reg-step-1');
+          const step2 = document.getElementById('reg-step-2');
+          const dot1 = document.getElementById('dot-1');
+          const dot2 = document.getElementById('dot-2');
+          
+          if (step1) step1.style.display = 'block';
+          if (step2) step2.style.display = 'none';
+          if (dot1) {
+            dot1.classList.add('active');
+            dot1.style.background = 'var(--primary-brand)';
+          }
+          if (dot2) {
+            dot2.classList.remove('active');
+            dot2.style.background = 'var(--border-color)';
+          }
+        });
+      }
+
       // Switch tabs
       tabLoginBtn.addEventListener('click', () => {
         tabRegisterBtn.classList.remove('active');
@@ -967,6 +1067,7 @@
         document.getElementById('portal-subtitle').textContent = "Access your restaurant or food outlet terminal";
         errorBox.style.display = 'none';
         successBox.style.display = 'none';
+        resetRegForm();
       });
 
       function activateRegisterTab() {
@@ -978,6 +1079,7 @@
         document.getElementById('portal-subtitle').textContent = "Submit a request to CodeArc for a new SaaS instance";
         errorBox.style.display = 'none';
         successBox.style.display = 'none';
+        resetRegForm();
       }
 
       tabRegisterBtn.addEventListener('click', activateRegisterTab);
@@ -1195,7 +1297,7 @@
             // and asynchronously by the backend gateway server listening to Supabase Realtime changes on saas_tenants.
             // This eliminates token exposure in the public client-side frontend code.
 
-            registerForm.reset();
+            resetRegForm();
             // Scroll to top of card to show success message
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
