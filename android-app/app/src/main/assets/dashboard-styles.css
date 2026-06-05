@@ -97,8 +97,6 @@ body {
   letter-spacing: var(--tracking-base);
   line-height: var(--lh-base);
   position: relative;
-  opacity: 0;
-  transition: opacity 0.15s ease-in-out;
 }
 
 body::before {

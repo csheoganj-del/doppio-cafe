@@ -6386,7 +6386,6 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
         }
       }
     }
-    document.body.style.opacity = '1';
   }
 
   // ==========================================
