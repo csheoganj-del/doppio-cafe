@@ -478,15 +478,15 @@ body::before {
    TOP HEADER AREA (DATA RICH IN enterprise POS)
    ========================================== */
 .dashboard-header {
-  padding: 10px 24px;
+  padding: 18px 32px;
   background-color: var(--white);
   border-bottom: 1px solid var(--border-subtle);
   display: grid;
-  grid-template-columns: 200px 1fr auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 16px;
+  gap: 32px;
   flex-shrink: 0;
-  box-shadow: 0 2px 10px rgba(28, 28, 28, 0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.01);
 }
 
 .header-left {
@@ -496,19 +496,19 @@ body::before {
 
 #tab-title {
   font-family: var(--font-heading);
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 600;
   color: var(--primary-brand);
-  letter-spacing: var(--tracking-tight);
+  letter-spacing: -0.02em;
 }
 
 #tab-subtitle {
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--text-muted);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-top: 1px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
 }
 
 /* Header summary metrics grid for cashiers */
@@ -672,7 +672,7 @@ body::before {
 /* Workspace Area Container */
 .workspace-area {
   flex-grow: 1;
-  padding: 12px 16px;
+  padding: 24px 32px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
