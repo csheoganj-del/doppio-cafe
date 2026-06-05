@@ -12390,7 +12390,7 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
   async function renderSuperAdminTab() {
     const listContainer = document.getElementById('saas-tenants-list');
     if (!listContainer) return;
-    listContainer.innerHTML = '<tr><td colspan="7" style="padding:16px; text-align:center;">Loading food outlets database...</td></tr>';
+    listContainer.innerHTML = '<div style="padding: 32px; text-align: center; color: #6B7280; font-size: 13px; background: #FFFFFF; border-radius: 12px; border: 1px solid rgba(43,24,19,0.05);"><i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px; color: #C67C4E;"></i> Loading client workspace registry...</div>';
 
     const { data: tenants, error } = await supabaseClient
       .from('saas_tenants')
@@ -12398,12 +12398,12 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
       .order('created_at', { ascending: false });
 
     if (error) {
-      listContainer.innerHTML = `<tr><td colspan="7" style="padding:16px; text-align:center; color:#ef4444;">Error loading tenants: ${error.message}</td></tr>`;
+      listContainer.innerHTML = `<div style="padding: 32px; text-align: center; color: #ef4444; font-size: 13px; background: #FFFFFF; border-radius: 12px; border: 1px solid rgba(239,68,68,0.1);"><i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i> Error loading workspaces: ${error.message}</div>`;
       return;
     }
 
     if (!tenants || tenants.length === 0) {
-      listContainer.innerHTML = '<tr><td colspan="7" style="padding:16px; text-align:center; color:#64748b;">No food outlets registered yet.</td></tr>';
+      listContainer.innerHTML = '<div style="padding: 48px; text-align: center; color: #6B7280; font-size: 13px; background: #FFFFFF; border-radius: 12px; border: 1px solid rgba(43,24,19,0.05); display: flex; flex-direction: column; align-items: center; gap: 8px;"><i class="fa-solid fa-store-slash" style="font-size: 24px; color: #9CA3AF;"></i> <div>No registered client food outlets found.</div></div>';
       return;
     }
 
@@ -12422,29 +12422,74 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
       const badgeClass = t.status === 'approved' ? 'paid' : t.status === 'suspended' ? 'void' : 'hold';
       const statusText = t.status === 'approved' ? 'Active' : t.status === 'suspended' ? 'Suspended' : 'Pending';
       const outletLabel = (t.outlet_type || 'cafe').toUpperCase();
+      
+      const badgeStyle = t.status === 'approved' 
+        ? 'background: rgba(34, 197, 94, 0.1); color: #22C55E;' 
+        : t.status === 'suspended' 
+          ? 'background: rgba(239, 68, 68, 0.1); color: #EF4444;' 
+          : 'background: rgba(245, 158, 11, 0.1); color: #F59E0B;';
+
       return `
-        <tr style="border-bottom:1px solid rgba(0,0,0,0.05); height:45px; color:#000;">
-          <td style="padding:10px; width:40px; text-align:center;">
-            <input type="checkbox" class="tenant-select-checkbox" data-id="${t.id}" style="cursor: pointer;">
-          </td>
-          <td style="padding:10px; font-weight:700;">
-            <div style="font-size:13px; color:#0f172a;">${t.name}</div>
-            <div style="font-size:10px; color:#64748b; font-weight:400;">Outlet ID: ${t.slug}</div>
-          </td>
-          <td style="padding:10px; font-size:11px; font-weight:600; color:#b57a3e;">${outletLabel}</td>
-          <td style="padding:10px; font-size:11px; color:#334155;">
-            <div><i class="fa-solid fa-envelope" style="color:#64748b; font-size:10px;"></i> ${t.email || '-'}</div>
-            ${t.phone ? `<div style="margin-top:3px;"><i class="fa-brands fa-whatsapp" style="color:#25d366; font-size:11px;"></i> <strong>+${t.phone}</strong></div>` : ''}
-          </td>
-          <td style="padding:10px; font-size:11px; color:#334155;">
-            <div>Admin User: <strong>${t.username}</strong></div>
-          </td>
-          <td style="padding:10px;"><span class="status-badge ${badgeClass}">${statusText}</span></td>
-          <td style="padding:10px; text-align:right;">
-            <button class="btn btn-secondary manage-tenant-btn" data-id="${t.id}" style="padding:4px 10px; font-size:11px; border-radius:6px; background:#f1f5f9; border:1px solid #cbd5e1; cursor:pointer; margin-right:5px;"><i class="fa-solid fa-gear"></i> Manage</button>
-            <button class="btn btn-secondary delete-single-tenant-btn" data-id="${t.id}" data-name="${t.name}" style="padding:4px 10px; font-size:11px; border-radius:6px; background:rgba(239, 68, 68, 0.05); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.2); cursor:pointer;"><i class="fa-solid fa-trash"></i> Delete</button>
-          </td>
-        </tr>
+        <div class="tenant-workspace-card" style="display: flex; align-items: center; padding: 16px; background: #FFFFFF; border: 1px solid rgba(43,24,19,0.05); border-radius: 12px; gap: 16px; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.02); color: #2B2B2B; font-family: var(--font-body);" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(43,24,19,0.05)'; this.style.borderColor='rgba(198,124,78,0.2)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.02)'; this.style.borderColor='rgba(43,24,19,0.05)';">
+          <!-- Selection Checkbox -->
+          <div style="width: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <input type="checkbox" class="tenant-select-checkbox" data-id="${t.id}" style="cursor: pointer; width: 15px; height: 15px; accent-color: #C67C4E;">
+          </div>
+          
+          <!-- Name & Avatar -->
+          <div style="flex: 2.5; min-width: 200px; display: flex; align-items: center; gap: 12px; overflow: hidden;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(198, 124, 78, 0.1); color: #C67C4E; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; text-transform: uppercase;">
+              ${(t.name || 'U').substring(0, 2)}
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+              <div style="font-size: 14px; font-weight: 700; color: #2B2B2B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${t.name}</div>
+              <div style="font-size: 10px; color: #6B7280; font-family: monospace;">workspace: ${t.slug}</div>
+            </div>
+          </div>
+
+          <!-- Outlet Type / Category Pill -->
+          <div style="flex: 1; min-width: 100px; display: flex; align-items: center;">
+            <span style="font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: rgba(198, 124, 78, 0.08); color: #C67C4E; text-transform: uppercase; letter-spacing: 0.5px;">
+              ${outletLabel}
+            </span>
+          </div>
+
+          <!-- Contact Details -->
+          <div style="flex: 2; min-width: 180px; display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #6B7280; overflow: hidden;">
+            <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+              <i class="fa-solid fa-envelope" style="width: 12px; color: #9CA3AF; flex-shrink: 0;"></i>
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t.email || '-'}</span>
+            </div>
+            ${t.phone ? `
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="fa-brands fa-whatsapp" style="width: 12px; color: #22C55E; flex-shrink: 0;"></i>
+              <strong style="color: #4B5563;">+${t.phone}</strong>
+            </div>` : ''}
+          </div>
+
+          <!-- System Login Details -->
+          <div style="flex: 1.5; min-width: 120px; display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: #6B7280;">
+            <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #9CA3AF; font-weight: 700;">Admin User</div>
+            <div style="font-weight: 600; color: #4B5563; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t.username}</div>
+          </div>
+
+          <!-- Status Badge -->
+          <div style="flex: 1; min-width: 100px; display: flex; align-items: center; justify-content: center;">
+            <span class="status-badge" style="padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid transparent; ${badgeStyle}">
+              ${statusText}
+            </span>
+          </div>
+
+          <!-- Actions -->
+          <div style="flex: 1.5; min-width: 150px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0;">
+            <button class="btn manage-tenant-btn" data-id="${t.id}" style="padding: 6px 12px; font-size: 11px; font-weight: 700; border-radius: 8px; background: #F6F3EE; border: 1px solid rgba(43,24,19,0.08); color: #2B2B2B; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;" onmouseover="this.style.background='#2B2B2B'; this.style.color='#FFFFFF';" onmouseout="this.style.background='#F6F3EE'; this.style.color='#2B2B2B';">
+              <i class="fa-solid fa-gear" style="font-size: 10px;"></i> Manage
+            </button>
+            <button class="btn delete-single-tenant-btn" data-id="${t.id}" data-name="${t.name}" style="padding: 6px; width: 28px; height: 28px; font-size: 11px; border-radius: 8px; background: rgba(239, 68, 68, 0.05); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.15); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#ef4444'; this.style.color='#FFFFFF';" onmouseout="this.style.background='rgba(239, 68, 68, 0.05)'; this.style.color='#ef4444';">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
       `;
     }).join('');
 

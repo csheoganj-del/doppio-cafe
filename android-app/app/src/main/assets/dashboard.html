@@ -1581,29 +1581,28 @@
             </div>
 
             <!-- Tenants list panel -->
-            <div class="report-panel" style="padding: 24px; border-radius: 16px; background: var(--white); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-sm); flex-grow: 1; min-height: 400px; display: flex; flex-direction: column;">
-              <h3 style="font-family: var(--font-heading); color: var(--primary-brand); font-size: 16px; font-weight: 700; margin: 0 0 16px 0; border-bottom: 1px dashed rgba(43,24,19,0.08); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <span><i class="fa-solid fa-store"></i> Registered Client Food Outlets</span>
+            <div class="report-panel" style="padding: 24px; border-radius: 16px; background: #F6F3EE; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-sm); flex-grow: 1; min-height: 400px; display: flex; flex-direction: column;">
+              <h3 style="font-family: var(--font-heading); color: #2B2B2B; font-size: 18px; font-weight: 800; margin: 0 0 16px 0; border-bottom: 1px dashed rgba(43,24,19,0.08); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-store" style="color: #C67C4E; margin-right: 6px;"></i> Client Workspace Registry</span>
                 <button id="btn-delete-selected-tenants" class="btn btn-secondary" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); font-size: 11px; padding: 6px 12px; cursor: pointer; display: none; align-items: center; gap: 6px; border-radius: 6px; font-family: var(--font-body);"><i class="fa-solid fa-trash"></i> Delete Selected</button>
               </h3>
               
-              <div style="overflow-x: auto; flex-grow: 1;">
-                <table class="dashboard-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
-                  <thead>
-                    <tr style="border-bottom: 1px solid rgba(43,24,19,0.08); color: var(--text-muted); font-weight: 700;">
-                      <th style="padding: 10px; width: 40px;"><input type="checkbox" id="select-all-tenants" style="cursor: pointer;"></th>
-                      <th style="padding: 10px;">Outlet Name / Slug</th>
-                      <th style="padding: 10px;">Type</th>
-                      <th style="padding: 10px;">Owner Contact</th>
-                      <th style="padding: 10px;">Login Details</th>
-                      <th style="padding: 10px;">Status</th>
-                      <th style="padding: 10px; text-align: right;">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="saas-tenants-list">
-                    <!-- Injected dynamically in JS -->
-                  </tbody>
-                </table>
+              <!-- Column Header Bar -->
+              <div style="display: flex; align-items: center; padding: 12px 16px; background: rgba(43,24,19,0.03); border-radius: 10px; margin-bottom: 12px; font-weight: 700; font-size: 11px; color: #6B7280; gap: 16px; font-family: var(--font-body);">
+                <div style="width: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <input type="checkbox" id="select-all-tenants" style="cursor: pointer; width: 15px; height: 15px; accent-color: #C67C4E;">
+                </div>
+                <div style="flex: 2.5; min-width: 200px;">Outlet Workspace</div>
+                <div style="flex: 1; min-width: 100px;">Outlet Type</div>
+                <div style="flex: 2; min-width: 180px;">Owner Contact</div>
+                <div style="flex: 1.5; min-width: 120px;">System Login</div>
+                <div style="flex: 1; min-width: 100px; text-align: center;">Status</div>
+                <div style="flex: 1.5; min-width: 150px; text-align: right;">Actions</div>
+              </div>
+
+              <!-- List of workspace cards -->
+              <div id="saas-tenants-list" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
+                <!-- Injected dynamically in JS -->
               </div>
             </div>
           </div>
