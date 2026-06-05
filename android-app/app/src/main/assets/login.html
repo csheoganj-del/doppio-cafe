@@ -1320,7 +1320,7 @@
             sessionStorage.setItem('tenant_id', 'superadmin');
             sessionStorage.setItem('tenant_slug', 'superadmin');
             sessionStorage.setItem('tenant_name', 'SaaS Platform Owner');
-            sessionStorage.setItem('allowed_tabs', JSON.stringify(['super-admin-tab']));
+            sessionStorage.setItem('allowed_tabs', JSON.stringify(['super-admin-tab', 'gateway-monitor-tab']));
             
             if (window.AndroidInterface) window.AndroidInterface.vibrate(80);
             window.location.href = 'dashboard.html';

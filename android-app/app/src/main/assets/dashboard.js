@@ -1685,8 +1685,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       const tabId = link.getAttribute('data-tab');
       
-      // Stop SaaS Gateway polling if we switch away from super-admin-tab
-      if (tabId !== 'super-admin-tab' && typeof stopSaaSGatewayPolling === 'function') {
+      // Stop SaaS Gateway polling if we switch away from gateway-monitor-tab
+      if (tabId !== 'gateway-monitor-tab' && typeof stopSaaSGatewayPolling === 'function') {
         stopSaaSGatewayPolling();
       }
       
@@ -1761,6 +1761,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       else if (tabId === 'super-admin-tab') {
         tabSubtitle.textContent = 'Manage client subscriptions, features, and system access';
         renderSuperAdminTab();
+      }
+      else if (tabId === 'gateway-monitor-tab') {
+        tabSubtitle.textContent = 'Monitor WhatsApp and Email notifications dispatch';
+        setupGatewayMonitorTab();
       }
     });
   });
@@ -6302,13 +6306,19 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
 
       const saLink = document.getElementById('sidebar-super-admin-link');
       if (saLink) saLink.style.display = 'flex';
+      const gmLink = document.getElementById('sidebar-gateway-monitor-link');
+      if (gmLink) gmLink.style.display = 'flex';
       
       const sidebarLinks = document.querySelectorAll('.sidebar-link');
       sidebarLinks.forEach(link => {
         const tabId = link.getAttribute('data-tab');
-        if (tabId === 'super-admin-tab') {
+        if (tabId === 'super-admin-tab' || tabId === 'gateway-monitor-tab') {
           link.style.display = 'flex';
-          link.classList.add('active');
+          if (tabId === 'super-admin-tab') {
+            link.classList.add('active');
+          } else {
+            link.classList.remove('active');
+          }
         } else {
           link.style.display = 'none';
         }
@@ -7797,8 +7807,8 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
     // Guard: "More" button has no tab
     if (!tabId) return;
 
-    // Stop SaaS Gateway polling if we switch away from super-admin-tab
-    if (tabId !== 'super-admin-tab' && typeof stopSaaSGatewayPolling === 'function') {
+    // Stop SaaS Gateway polling if we switch away from gateway-monitor-tab
+    if (tabId !== 'gateway-monitor-tab' && typeof stopSaaSGatewayPolling === 'function') {
       stopSaaSGatewayPolling();
     }
 
@@ -7855,6 +7865,8 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
       if (typeof renderTokensTab === 'function') renderTokensTab();
     } else if (tabId === 'super-admin-tab') {
       renderSuperAdminTab();
+    } else if (tabId === 'gateway-monitor-tab') {
+      setupGatewayMonitorTab();
     } else if (tabId === 'qr-orders-tab') {
       if (typeof updateQrOrdersDashboardUI === 'function') updateQrOrdersDashboardUI();
     }
@@ -12736,6 +12748,59 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
     }
   }
 
+  async function setupGatewayMonitorTab() {
+    // Set up SaaS Gateway Action Listeners
+    const resetBtn = document.getElementById('btn-saas-gateway-reset');
+    if (resetBtn && !resetBtn.dataset.listenerBound) {
+      resetBtn.dataset.listenerBound = 'true';
+      resetBtn.addEventListener('click', async () => {
+        if (confirm("Are you absolutely sure you want to RESET the WhatsApp Gateway?\n\nThis will completely purge the WhatsApp session files from the gateway storage. You will need to scan a new QR code to re-link your device!")) {
+          try {
+            resetBtn.disabled = true;
+            resetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Resetting...';
+            
+            const res = await fetch('https://kalpeshdeora1006-whatsapp-gateway.hf.space/reset', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (res.ok) {
+              showNotificationToast("WhatsApp Gateway reset successfully. Scan QR code to re-authenticate.");
+              await pollSuperAdminGateway();
+            } else {
+              const data = await res.json().catch(() => ({}));
+              alert("Failed to reset gateway: " + (data.message || 'Unknown error'));
+            }
+          } catch (err) {
+            console.error("Error resetting SaaS gateway:", err);
+            alert("Error communicating with gateway: " + err.message);
+          } finally {
+            resetBtn.disabled = false;
+            resetBtn.innerHTML = '<i class="fa-solid fa-power-off"></i> Reset Gateway Connection';
+          }
+        }
+      });
+    }
+
+    const refreshLogsBtn = document.getElementById('btn-refresh-saas-logs');
+    if (refreshLogsBtn && !refreshLogsBtn.dataset.listenerBound) {
+      refreshLogsBtn.dataset.listenerBound = 'true';
+      refreshLogsBtn.addEventListener('click', async () => {
+        const icon = refreshLogsBtn.querySelector('i');
+        if (icon) icon.classList.add('fa-spin');
+        await pollSuperAdminGateway();
+        if (icon) {
+          setTimeout(() => {
+            icon.classList.remove('fa-spin');
+          }, 600);
+        }
+      });
+    }
+
+    // Start polling when loading the tab
+    startSaaSGatewayPolling();
+  }
+
   async function sha256(string) {
     const utf8 = new TextEncoder().encode(string);
     const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
@@ -12975,57 +13040,6 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
         }
       });
     });
-
-    // Set up SaaS Gateway Action Listeners
-    const resetBtn = document.getElementById('btn-saas-gateway-reset');
-    if (resetBtn && !resetBtn.dataset.listenerBound) {
-      resetBtn.dataset.listenerBound = 'true';
-      resetBtn.addEventListener('click', async () => {
-        if (confirm("Are you absolutely sure you want to RESET the WhatsApp Gateway?\n\nThis will completely purge the WhatsApp session files from the gateway storage. You will need to scan a new QR code to re-link your device!")) {
-          try {
-            resetBtn.disabled = true;
-            resetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Resetting...';
-            
-            const res = await fetch('https://kalpeshdeora1006-whatsapp-gateway.hf.space/reset', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            
-            if (res.ok) {
-              showNotificationToast("WhatsApp Gateway reset successfully. Scan QR code to re-authenticate.");
-              await pollSuperAdminGateway();
-            } else {
-              const data = await res.json().catch(() => ({}));
-              alert("Failed to reset gateway: " + (data.message || 'Unknown error'));
-            }
-          } catch (err) {
-            console.error("Error resetting SaaS gateway:", err);
-            alert("Error communicating with gateway: " + err.message);
-          } finally {
-            resetBtn.disabled = false;
-            resetBtn.innerHTML = '<i class="fa-solid fa-power-off"></i> Reset Gateway Connection';
-          }
-        }
-      });
-    }
-
-    const refreshLogsBtn = document.getElementById('btn-refresh-saas-logs');
-    if (refreshLogsBtn && !refreshLogsBtn.dataset.listenerBound) {
-      refreshLogsBtn.dataset.listenerBound = 'true';
-      refreshLogsBtn.addEventListener('click', async () => {
-        const icon = refreshLogsBtn.querySelector('i');
-        if (icon) icon.classList.add('fa-spin');
-        await pollSuperAdminGateway();
-        if (icon) {
-          setTimeout(() => {
-            icon.classList.remove('fa-spin');
-          }, 600);
-        }
-      });
-    }
-
-    // Start polling when loading the tab
-    startSaaSGatewayPolling();
   }
 
   function openTenantManageModal(tenant) {
