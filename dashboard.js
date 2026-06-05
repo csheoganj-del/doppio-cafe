@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const allowedTabsRaw = sessionStorage.getItem('allowed_tabs');
   // ⚡ let (not const) — so the realtime listener can hot-swap tabs without re-login
   let allowedTabs = allowedTabsRaw ? JSON.parse(allowedTabsRaw) : [];
+  let saasGatewayPollingInterval = null;
 
   // ==========================================
   // TRIPLE-VAULT RESILIENCE VAULT (IndexedDB)
@@ -12531,7 +12532,6 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
   // ==========================================================
   // SAAS MULTI-TENANT SUPER-ADMIN CONTROLS (Made by CodeArc)
   // ==========================================================
-  let saasGatewayPollingInterval = null;
 
   async function pollSuperAdminGateway() {
     // 1. Fetch Gateway Status (Non-blocking)
