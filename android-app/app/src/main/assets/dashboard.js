@@ -12760,21 +12760,47 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
         return;
       }
 
-      const tenantIdEl = document.getElementById('manage-tenant-id');
+      const tenantIdEl   = document.getElementById('manage-tenant-id');
       const tenantNameEl = document.getElementById('manage-tenant-name');
-      const usernameEl = document.getElementById('manage-username');
-      const passwordEl = document.getElementById('manage-password');
-      const statusEl = document.getElementById('manage-status');
-      const phoneEl = document.getElementById('manage-phone');
-      const emailEl = document.getElementById('manage-email');
+      const avatarEl     = document.getElementById('manage-tenant-avatar');
+      const statusBadge  = document.getElementById('manage-status-badge');
+      const usernameEl   = document.getElementById('manage-username');
+      const passwordEl   = document.getElementById('manage-password');
+      const statusEl     = document.getElementById('manage-status');
+      const phoneEl      = document.getElementById('manage-phone');
+      const emailEl      = document.getElementById('manage-email');
 
+      // ── Populate hidden store + IDs ──
       if (tenantIdEl) {
         tenantIdEl.value = tenant.id || '';
         tenantIdEl.setAttribute('data-slug', tenant.slug || '');
       }
-      if (tenantNameEl) tenantNameEl.textContent = (tenant.name || 'Unknown') + ` (${(tenant.outlet_type || 'cafe').toUpperCase()})`;
+
+      // ── Outlet name (strip type tag for cleanliness) ──
+      const displayName = (tenant.name || 'Unknown') + ` (${(tenant.outlet_type || 'CAFE').toUpperCase()})`;
+      if (tenantNameEl) tenantNameEl.textContent = displayName;
+
+      // ── Avatar initial letter ──
+      if (avatarEl) avatarEl.textContent = (tenant.name || 'U').charAt(0).toUpperCase();
+
+      // ── Status badge ──
+      if (statusBadge) {
+        const s = tenant.status || 'pending';
+        const badgeMap = {
+          approved:  { dot: '#22C55E', bg: 'rgba(34,197,94,0.1)',  border: 'rgba(34,197,94,0.2)',  color: '#16A34A', label: 'Active'    },
+          pending:   { dot: '#F59E0B', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)', color: '#B45309', label: 'Pending'   },
+          suspended: { dot: '#EF4444', bg: 'rgba(239,68,68,0.1)',  border: 'rgba(239,68,68,0.2)',  color: '#DC2626', label: 'Suspended' }
+        };
+        const b = badgeMap[s] || badgeMap.pending;
+        statusBadge.style.background    = b.bg;
+        statusBadge.style.borderColor   = b.border;
+        statusBadge.style.color         = b.color;
+        statusBadge.innerHTML = `<span style="width:6px;height:6px;border-radius:50%;background:${b.dot};display:inline-block;"></span>${b.label}`;
+      }
+
+      // ── Form fields ──
       if (usernameEl) usernameEl.value = tenant.username || '';
-      if (passwordEl) passwordEl.value = ''; 
+      if (passwordEl) passwordEl.value = '';
       if (statusEl) {
         statusEl.value = tenant.status || 'pending';
         statusEl.setAttribute('data-prev-status', tenant.status || 'pending');
@@ -12782,12 +12808,29 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
       if (phoneEl) phoneEl.value = tenant.phone || '';
       if (emailEl) emailEl.value = tenant.email || '';
 
-      const allowed = Array.isArray(tenant.allowed_tabs) ? tenant.allowed_tabs : [];
+      // ── Feature checkboxes + card highlight ──
+      const allowed   = Array.isArray(tenant.allowed_tabs) ? tenant.allowed_tabs : [];
       const checkboxes = document.querySelectorAll('#manage-tabs-grid input[type="checkbox"]');
       console.log(`Checking ${checkboxes.length} checkboxes against allowed tabs:`, allowed);
-      
+
       checkboxes.forEach(cb => {
         cb.checked = allowed.includes(cb.value);
+        // Style the parent card label
+        const card = cb.closest('label');
+        if (card) {
+          if (cb.checked) {
+            card.style.borderColor = 'rgba(252,128,25,0.45)';
+            card.style.background  = 'rgba(252,128,25,0.06)';
+          } else {
+            card.style.borderColor = '#E2E8F0';
+            card.style.background  = '#FAFAFA';
+          }
+          // Keep card in sync when user clicks
+          cb.addEventListener('change', () => {
+            card.style.borderColor = cb.checked ? 'rgba(252,128,25,0.45)' : '#E2E8F0';
+            card.style.background  = cb.checked ? 'rgba(252,128,25,0.06)' : '#FAFAFA';
+          }, { once: false });
+        }
       });
 
       modal.classList.add('active');
