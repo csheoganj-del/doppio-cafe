@@ -565,6 +565,8 @@ body::before {
   display: flex;
   align-items: center;
   gap: 10px;
+  grid-column: 3;
+  justify-self: end;
 }
 
 .status-indicator-badge {
