@@ -12390,7 +12390,7 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
   async function renderSuperAdminTab() {
     const listContainer = document.getElementById('saas-tenants-list');
     if (!listContainer) return;
-    listContainer.innerHTML = '<tr><td colspan="6" style="padding:16px; text-align:center;">Loading food outlets database...</td></tr>';
+    listContainer.innerHTML = '<tr><td colspan="7" style="padding:16px; text-align:center;">Loading food outlets database...</td></tr>';
 
     const { data: tenants, error } = await supabaseClient
       .from('saas_tenants')
@@ -12398,13 +12398,24 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
       .order('created_at', { ascending: false });
 
     if (error) {
-      listContainer.innerHTML = `<tr><td colspan="6" style="padding:16px; text-align:center; color:#ef4444;">Error loading tenants: ${error.message}</td></tr>`;
+      listContainer.innerHTML = `<tr><td colspan="7" style="padding:16px; text-align:center; color:#ef4444;">Error loading tenants: ${error.message}</td></tr>`;
       return;
     }
 
     if (!tenants || tenants.length === 0) {
-      listContainer.innerHTML = '<tr><td colspan="6" style="padding:16px; text-align:center; color:#64748b;">No food outlets registered yet.</td></tr>';
+      listContainer.innerHTML = '<tr><td colspan="7" style="padding:16px; text-align:center; color:#64748b;">No food outlets registered yet.</td></tr>';
       return;
+    }
+
+    // Reset selection state
+    const selectAllCheckbox = document.getElementById('select-all-tenants');
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
+    const deleteSelectedBtn = document.getElementById('btn-delete-selected-tenants');
+    if (deleteSelectedBtn) {
+      deleteSelectedBtn.style.display = 'none';
     }
 
     listContainer.innerHTML = tenants.map(t => {
@@ -12413,6 +12424,9 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
       const outletLabel = (t.outlet_type || 'cafe').toUpperCase();
       return `
         <tr style="border-bottom:1px solid rgba(0,0,0,0.05); height:45px; color:#000;">
+          <td style="padding:10px; width:40px; text-align:center;">
+            <input type="checkbox" class="tenant-select-checkbox" data-id="${t.id}" style="cursor: pointer;">
+          </td>
           <td style="padding:10px; font-weight:700;">
             <div style="font-size:13px; color:#0f172a;">${t.name}</div>
             <div style="font-size:10px; color:#64748b; font-weight:400;">Outlet ID: ${t.slug}</div>
@@ -12427,11 +12441,91 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
           </td>
           <td style="padding:10px;"><span class="status-badge ${badgeClass}">${statusText}</span></td>
           <td style="padding:10px; text-align:right;">
-            <button class="btn btn-secondary manage-tenant-btn" data-id="${t.id}" style="padding:4px 10px; font-size:11px; border-radius:6px; background:#f1f5f9; border:1px solid #cbd5e1; cursor:pointer;"><i class="fa-solid fa-gear"></i> Manage</button>
+            <button class="btn btn-secondary manage-tenant-btn" data-id="${t.id}" style="padding:4px 10px; font-size:11px; border-radius:6px; background:#f1f5f9; border:1px solid #cbd5e1; cursor:pointer; margin-right:5px;"><i class="fa-solid fa-gear"></i> Manage</button>
+            <button class="btn btn-secondary delete-single-tenant-btn" data-id="${t.id}" data-name="${t.name}" style="padding:4px 10px; font-size:11px; border-radius:6px; background:rgba(239, 68, 68, 0.05); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.2); cursor:pointer;"><i class="fa-solid fa-trash"></i> Delete</button>
           </td>
         </tr>
       `;
     }).join('');
+
+    // Update bulk delete button visibility based on checked boxes
+    function updateDeleteSelectedBtnVisibility() {
+      const checkboxes = listContainer.querySelectorAll('.tenant-select-checkbox');
+      const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+      
+      if (deleteSelectedBtn) {
+        if (checkedBoxes.length > 0) {
+          deleteSelectedBtn.style.display = 'flex';
+        } else {
+          deleteSelectedBtn.style.display = 'none';
+        }
+      }
+      
+      if (selectAllCheckbox) {
+        if (checkboxes.length > 0 && checkedBoxes.length === checkboxes.length) {
+          selectAllCheckbox.checked = true;
+          selectAllCheckbox.indeterminate = false;
+        } else if (checkedBoxes.length > 0) {
+          selectAllCheckbox.checked = false;
+          selectAllCheckbox.indeterminate = true;
+        } else {
+          selectAllCheckbox.checked = false;
+          selectAllCheckbox.indeterminate = false;
+        }
+      }
+    }
+
+    // Set up listeners for bulk actions
+    if (selectAllCheckbox && !selectAllCheckbox.dataset.listenerBound) {
+      selectAllCheckbox.dataset.listenerBound = 'true';
+      selectAllCheckbox.addEventListener('change', () => {
+        const checkboxes = listContainer.querySelectorAll('.tenant-select-checkbox');
+        checkboxes.forEach(cb => {
+          cb.checked = selectAllCheckbox.checked;
+        });
+        updateDeleteSelectedBtnVisibility();
+      });
+    }
+
+    if (deleteSelectedBtn && !deleteSelectedBtn.dataset.listenerBound) {
+      deleteSelectedBtn.dataset.listenerBound = 'true';
+      deleteSelectedBtn.addEventListener('click', async () => {
+        const checkboxes = listContainer.querySelectorAll('.tenant-select-checkbox');
+        const checkedIds = Array.from(checkboxes)
+          .filter(cb => cb.checked)
+          .map(cb => cb.getAttribute('data-id'));
+        
+        if (checkedIds.length === 0) return;
+        
+        if (confirm(`Are you sure you want to delete the ${checkedIds.length} selected client outlets?\n\nThis will permanently erase their registrations and all their associated data from Supabase!`)) {
+          try {
+            console.log("Bulk deleting tenant IDs:", checkedIds);
+            const { error } = await supabaseClient
+              .from('saas_tenants')
+              .delete()
+              .in('id', checkedIds);
+              
+            if (error) {
+              console.error("Supabase bulk deletion error:", error);
+              alert("Failed to delete selected accounts: " + error.message);
+            } else {
+              showNotificationToast(`${checkedIds.length} client accounts successfully deleted.`);
+              await renderSuperAdminTab();
+            }
+          } catch (err) {
+            console.error("Error in bulk delete handler:", err);
+            alert("Client-side system error during bulk deletion: " + err.message);
+          }
+        }
+      });
+    }
+
+    // Add change handlers for row checkboxes
+    listContainer.querySelectorAll('.tenant-select-checkbox').forEach(cb => {
+      cb.addEventListener('change', () => {
+        updateDeleteSelectedBtnVisibility();
+      });
+    });
 
     // Add click handlers for manage buttons
     listContainer.querySelectorAll('.manage-tenant-btn').forEach(btn => {
@@ -12450,6 +12544,33 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
         } else {
           console.warn("SuperAdmin: No tenant found in cached list for ID: " + tenantId);
           alert("Error: Tenant record details not found in local cache.");
+        }
+      });
+    });
+
+    // Add click handlers for delete buttons
+    listContainer.querySelectorAll('.delete-single-tenant-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const tenantId = btn.getAttribute('data-id');
+        const tenantName = btn.getAttribute('data-name');
+        
+        if (confirm(`Are you absolutely sure you want to DELETE: ${tenantName}?\n\nThis will permanently erase their registration and cascade delete all their associated data from Supabase!`)) {
+          try {
+            console.log("Requesting deletion of tenant ID:", tenantId);
+            const { error } = await supabaseClient.from('saas_tenants').delete().eq('id', tenantId);
+            if (error) {
+              console.error("Supabase deletion error:", error);
+              alert("Failed to delete account: " + error.message);
+            } else {
+              showNotificationToast("Client account successfully deleted.");
+              await renderSuperAdminTab();
+            }
+          } catch (err) {
+            console.error("Error in delete-single-tenant-btn handler:", err);
+            alert("Client-side system error deleting client: " + err.message);
+          }
         }
       });
     });
