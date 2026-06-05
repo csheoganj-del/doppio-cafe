@@ -762,6 +762,7 @@
 
         let mouse = { x: -1000, y: -1000, radius: 180 };
         let time = 0;
+        let cardRect = null;
 
         // Resize handler
         window.addEventListener('resize', () => {
@@ -900,8 +901,8 @@
               let currentX = this.x + waveX;
               
               // Flow around the loginCard
-              if (loginCard) {
-                const rect = loginCard.getBoundingClientRect();
+              if (cardRect) {
+                const rect = cardRect;
                 const pad = this.width * 0.4 + 12;
                 const cardLeft = rect.left - pad;
                 const cardRight = rect.right + pad;
@@ -972,8 +973,8 @@
             this.alpha -= this.decay;
 
             // Float around card boundaries
-            if (loginCard) {
-              const rect = loginCard.getBoundingClientRect();
+            if (cardRect) {
+              const rect = cardRect;
               const pad = this.radius + 4;
               if (this.x + pad > rect.left && this.x - pad < rect.right &&
                   this.y + pad > rect.top && this.y - pad < rect.bottom) {
@@ -1086,6 +1087,7 @@
         function loop() {
           time += 1;
           ctx.clearRect(0, 0, width, height);
+          cardRect = loginCard ? loginCard.getBoundingClientRect() : null;
 
           // Update & Draw all items
           items.forEach((item, index) => {
