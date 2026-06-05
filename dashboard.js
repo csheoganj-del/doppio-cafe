@@ -1685,6 +1685,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       const tabId = link.getAttribute('data-tab');
       
+      // Stop SaaS Gateway polling if we switch away from super-admin-tab
+      if (tabId !== 'super-admin-tab' && typeof stopSaaSGatewayPolling === 'function') {
+        stopSaaSGatewayPolling();
+      }
+      
       // If takeaway tab is clicked and there are items in the cart, clear it
       if (tabId === 'pos-tab' && cart.length > 0) {
         SoundEffects.playRemove();
@@ -7792,6 +7797,11 @@ CREATE TABLE IF NOT EXISTS public.doppio_bills (
     // Guard: "More" button has no tab
     if (!tabId) return;
 
+    // Stop SaaS Gateway polling if we switch away from super-admin-tab
+    if (tabId !== 'super-admin-tab' && typeof stopSaaSGatewayPolling === 'function') {
+      stopSaaSGatewayPolling();
+    }
+
     // Clear cart if navigating away from POS
     if (tabId === 'pos-tab' && cart.length > 0) {
       SoundEffects.playRemove();
@@ -12509,6 +12519,223 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
   // ==========================================================
   // SAAS MULTI-TENANT SUPER-ADMIN CONTROLS (Made by CodeArc)
   // ==========================================================
+  let saasGatewayPollingInterval = null;
+
+  async function pollSuperAdminGateway() {
+    const statusBadge = document.getElementById('saas-gateway-status');
+    const phoneEl = document.getElementById('saas-gateway-phone');
+    const sessionEl = document.getElementById('saas-gateway-session-saved');
+    const qrContainer = document.getElementById('saas-gateway-qr-container');
+    const qrImg = document.getElementById('saas-gateway-qr-img');
+    const qrSpinner = document.getElementById('saas-gateway-qr-spinner');
+    const connectedView = document.getElementById('saas-gateway-connected-view');
+    const logsContainer = document.getElementById('saas-notification-logs-container');
+
+    // 1. Fetch Gateway Status
+    try {
+      const res = await fetch('https://kalpeshdeora1006-whatsapp-gateway.hf.space/status');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      if (statusBadge) {
+        statusBadge.textContent = data.status ? data.status.toUpperCase() : 'UNKNOWN';
+        if (data.status === 'ready') {
+          statusBadge.style.background = 'rgba(34, 197, 94, 0.1)';
+          statusBadge.style.color = '#22C55E';
+        } else if (data.status === 'qr') {
+          statusBadge.style.background = 'rgba(245, 158, 11, 0.1)';
+          statusBadge.style.color = '#F59E0B';
+        } else {
+          statusBadge.style.background = 'rgba(239, 68, 68, 0.1)';
+          statusBadge.style.color = '#EF4444';
+        }
+      }
+
+      if (phoneEl) {
+        phoneEl.textContent = data.number ? `+${data.number}` : 'Not Linked';
+      }
+
+      if (sessionEl) {
+        if (data.sessionSavedAt) {
+          const date = new Date(data.sessionSavedAt);
+          sessionEl.textContent = date.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+        } else {
+          sessionEl.textContent = 'Never';
+        }
+      }
+
+      if (data.status === 'ready') {
+        if (qrContainer) qrContainer.style.display = 'none';
+        if (connectedView) connectedView.style.display = 'flex';
+      } else if (data.status === 'qr') {
+        if (connectedView) connectedView.style.display = 'none';
+        if (qrContainer) qrContainer.style.display = 'flex';
+        
+        if (data.qr) {
+          if (qrSpinner) qrSpinner.style.display = 'none';
+          if (qrImg) {
+            qrImg.src = data.qr;
+            qrImg.style.display = 'block';
+          }
+        } else {
+          if (qrSpinner) qrSpinner.style.display = 'block';
+          if (qrImg) qrImg.style.display = 'none';
+        }
+      } else {
+        if (connectedView) connectedView.style.display = 'none';
+        if (qrContainer) qrContainer.style.display = 'flex';
+        if (qrSpinner) {
+          qrSpinner.style.display = 'block';
+          qrSpinner.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="margin-bottom: 6px; font-size: 16px; color: #FC8019;"></i><br>Connecting (Status: ${data.status ? data.status.toUpperCase() : 'UNKNOWN'})`;
+        }
+        if (qrImg) qrImg.style.display = 'none';
+      }
+
+    } catch (err) {
+      console.warn('SuperAdmin: WhatsApp gateway status check failed:', err.message);
+      if (statusBadge) {
+        statusBadge.textContent = 'OFFLINE';
+        statusBadge.style.background = 'rgba(239, 68, 68, 0.1)';
+        statusBadge.style.color = '#EF4444';
+      }
+      if (phoneEl) phoneEl.textContent = 'Unknown';
+      if (sessionEl) sessionEl.textContent = 'Unknown';
+      if (connectedView) connectedView.style.display = 'none';
+      if (qrContainer) qrContainer.style.display = 'flex';
+      if (qrSpinner) {
+        qrSpinner.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="margin-bottom: 6px; font-size: 16px; color: #EF4444;"></i><br>Gateway Server Offline<br><span style="font-size: 8px; color: #9CA3AF; margin-top: 4px; display: block;">Check cloud space status</span>`;
+        qrSpinner.style.display = 'block';
+      }
+      if (qrImg) qrImg.style.display = 'none';
+    }
+
+    // 2. Fetch Dispatch Logs from Supabase gateway_health_log
+    try {
+      const { data: logs, error } = await supabaseClient
+        .from('gateway_health_log')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      if (logsContainer) {
+        if (!logs || logs.length === 0) {
+          logsContainer.innerHTML = '<div style="text-align: center; padding: 32px; color: #9CA3AF;">No recent dispatch logs found.</div>';
+          return;
+        }
+
+        logsContainer.innerHTML = logs.map(log => {
+          const logDate = new Date(log.created_at);
+          const timeStr = logDate.toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+          const dateStr = logDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+          
+          let eventTitle = log.event;
+          let detailsHtml = '';
+          let channelBadge = '';
+          let statusBadgeHtml = '';
+
+          // Format event status
+          if (log.status === 'ok') {
+            statusBadgeHtml = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 8px; font-weight: 800; background: rgba(34, 197, 94, 0.1); color: #22C55E; text-transform: uppercase;">Success</span>`;
+          } else if (log.status === 'warning') {
+            statusBadgeHtml = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 8px; font-weight: 800; background: rgba(245, 158, 11, 0.1); color: #F59E0B; text-transform: uppercase;">Warn</span>`;
+          } else {
+            statusBadgeHtml = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 8px; font-weight: 800; background: rgba(239, 68, 68, 0.1); color: #EF4444; text-transform: uppercase;">Error</span>`;
+          }
+
+          // Format channel & details based on event
+          const details = log.details || {};
+          const isWhatsApp = log.event.includes('whatsapp');
+          const isEmail = log.event.includes('email');
+          const isRegistration = log.event.includes('registration');
+          const isApproval = log.event.includes('approval');
+
+          if (isWhatsApp) {
+            channelBadge = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; background: rgba(37, 211, 102, 0.1); color: #25D366; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-brands fa-whatsapp"></i> WA</span>`;
+          } else if (isEmail) {
+            channelBadge = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; background: rgba(59, 130, 246, 0.1); color: #3B82F6; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-envelope"></i> Email</span>`;
+          } else {
+            channelBadge = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; background: rgba(107, 114, 128, 0.1); color: #6B7280;">Sys</span>`;
+          }
+
+          if (isRegistration) {
+            eventTitle = 'SaaS Registration';
+          } else if (isApproval) {
+            eventTitle = 'Workspace Approval';
+          } else if (log.event === 'connected') {
+            eventTitle = 'Gateway Connected';
+          } else if (log.event === 'disconnected') {
+            eventTitle = 'Gateway Disconnected';
+          } else if (log.event === 'session_saved') {
+            eventTitle = 'Session Backed Up';
+          } else if (log.event === 'alert_sent') {
+            eventTitle = 'Admin Alert Sent';
+          }
+
+          // Render details
+          if (details.name) {
+            detailsHtml += `<div style="font-weight: 700; color: #1C1C1C;">${details.name}</div>`;
+          }
+          if (details.phone) {
+            detailsHtml += `<div style="color: #4B5563; font-family: monospace;">+${details.phone}</div>`;
+          }
+          if (details.email) {
+            detailsHtml += `<div style="color: #4B5563; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${details.email}</div>`;
+          }
+          if (details.error) {
+            detailsHtml += `<div style="color: #EF4444; font-size: 10px; margin-top: 2px; font-weight: 500;"><i class="fa-solid fa-triangle-exclamation"></i> ${details.error}</div>`;
+          }
+          if (details.reason) {
+            detailsHtml += `<div style="color: #6B7280; font-size: 10px; margin-top: 2px;">Reason: ${details.reason}</div>`;
+          }
+
+          return `
+            <div class="log-entry" style="display: flex; gap: 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(28, 28, 28, 0.04); background: #FAF9F6; align-items: start; transition: all 0.2s;" onmouseover="this.style.background='#FFFFFF'; this.style.borderColor='rgba(252, 128, 25, 0.15)';" onmouseout="this.style.background='#FAF9F6'; this.style.borderColor='rgba(28, 28, 28, 0.04)';">
+              <!-- Timestamp -->
+              <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px; text-align: center; border-right: 1px solid rgba(28, 28, 28, 0.06); padding-right: 8px; flex-shrink: 0;">
+                <span style="font-weight: 700; color: #1C1C1C; font-size: 11px;">${timeStr}</span>
+                <span style="font-size: 9px; color: #9CA3AF; font-weight: 600;">${dateStr}</span>
+              </div>
+              
+              <!-- Content -->
+              <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                  <span style="font-weight: 700; color: #1C1C1C; font-size: 12px;">${eventTitle}</span>
+                  <div style="display: flex; gap: 4px; align-items: center;">
+                    ${channelBadge}
+                    ${statusBadgeHtml}
+                  </div>
+                </div>
+                <div style="font-size: 11px; margin-top: 2px;">
+                  ${detailsHtml}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch (err) {
+      console.error('SuperAdmin: Error fetching gateway health logs:', err);
+      if (logsContainer) {
+        logsContainer.innerHTML = `<div style="text-align: center; padding: 32px; color: #EF4444;"><i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i> Failed to load logs: ${err.message}</div>`;
+      }
+    }
+  }
+
+  function startSaaSGatewayPolling() {
+    if (saasGatewayPollingInterval) clearInterval(saasGatewayPollingInterval);
+    pollSuperAdminGateway();
+    saasGatewayPollingInterval = setInterval(pollSuperAdminGateway, 5000);
+  }
+
+  function stopSaaSGatewayPolling() {
+    if (saasGatewayPollingInterval) {
+      clearInterval(saasGatewayPollingInterval);
+      saasGatewayPollingInterval = null;
+    }
+  }
+
   async function sha256(string) {
     const utf8 = new TextEncoder().encode(string);
     const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
@@ -12748,6 +12975,57 @@ TRANSACTIONS LOG : ${totalTransactions} Bills
         }
       });
     });
+
+    // Set up SaaS Gateway Action Listeners
+    const resetBtn = document.getElementById('btn-saas-gateway-reset');
+    if (resetBtn && !resetBtn.dataset.listenerBound) {
+      resetBtn.dataset.listenerBound = 'true';
+      resetBtn.addEventListener('click', async () => {
+        if (confirm("Are you absolutely sure you want to RESET the WhatsApp Gateway?\n\nThis will completely purge the WhatsApp session files from the gateway storage. You will need to scan a new QR code to re-link your device!")) {
+          try {
+            resetBtn.disabled = true;
+            resetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Resetting...';
+            
+            const res = await fetch('https://kalpeshdeora1006-whatsapp-gateway.hf.space/reset', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (res.ok) {
+              showNotificationToast("WhatsApp Gateway reset successfully. Scan QR code to re-authenticate.");
+              await pollSuperAdminGateway();
+            } else {
+              const data = await res.json().catch(() => ({}));
+              alert("Failed to reset gateway: " + (data.message || 'Unknown error'));
+            }
+          } catch (err) {
+            console.error("Error resetting SaaS gateway:", err);
+            alert("Error communicating with gateway: " + err.message);
+          } finally {
+            resetBtn.disabled = false;
+            resetBtn.innerHTML = '<i class="fa-solid fa-power-off"></i> Reset Gateway Connection';
+          }
+        }
+      });
+    }
+
+    const refreshLogsBtn = document.getElementById('btn-refresh-saas-logs');
+    if (refreshLogsBtn && !refreshLogsBtn.dataset.listenerBound) {
+      refreshLogsBtn.dataset.listenerBound = 'true';
+      refreshLogsBtn.addEventListener('click', async () => {
+        const icon = refreshLogsBtn.querySelector('i');
+        if (icon) icon.classList.add('fa-spin');
+        await pollSuperAdminGateway();
+        if (icon) {
+          setTimeout(() => {
+            icon.classList.remove('fa-spin');
+          }, 600);
+        }
+      });
+    }
+
+    // Start polling when loading the tab
+    startSaaSGatewayPolling();
   }
 
   function openTenantManageModal(tenant) {
