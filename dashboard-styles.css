@@ -3354,7 +3354,7 @@ input:checked + .slider:before {
   .modal-body {
     padding: 16px !important;
     flex-grow: 1 !important;
-    overflow: hidden !important;
+    overflow-y: auto !important;
     display: flex !important;
     flex-direction: column !important;
   }
