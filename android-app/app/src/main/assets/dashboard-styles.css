@@ -2417,7 +2417,9 @@ textarea:focus {
   width: 90%;
   max-width: 520px;
   max-height: 85vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   transform: scale(0.9);
   transition: var(--transition);
 }
@@ -2458,6 +2460,9 @@ textarea:focus {
 
 .modal-body {
   padding: 24px;
+  overflow-y: auto;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 /* Settings modal visual receipt splitter */
